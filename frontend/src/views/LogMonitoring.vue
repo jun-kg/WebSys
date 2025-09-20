@@ -38,30 +38,212 @@
                   テストエラー送信
                 </el-button>
               </el-button-group>
-            </div>
-          </template>
 
-          <!-- リアルタイム統計 -->
-          <el-row :gutter="16">
-            <el-col :span="6" v-for="stat in statsCards" :key="stat.key">
-              <el-card :body-style="{ padding: '20px' }" shadow="hover">
-                <el-statistic
-                  :value="stat.value"
-                  :title="stat.title"
-                  :precision="0"
+              <!-- WebSocket接続状況 -->
+              <div class="websocket-status">
+                <el-tag
+                  :type="webSocket.connectionStatus.value === 'connected' ? 'success' :
+                        webSocket.connectionStatus.value === 'connecting' ? 'warning' : 'danger'"
+                  :icon="webSocket.connectionStatus.value === 'connected' ? 'Check' :
+                        webSocket.connectionStatus.value === 'connecting' ? 'Loading' : 'Close'"
+                  size="small"
                 >
-                  <template #prefix>
-                    <el-icon :style="{ color: stat.color }">
-                      <component :is="stat.icon" />
-                    </el-icon>
+                  {{ webSocket.connectionStatus.value === 'connected' ? 'リアルタイム監視中' :
+                     webSocket.connectionStatus.value === 'connecting' ? '接続中...' : '切断' }}
+                </el-tag>
+                <span v-if="webSocket.isConnected.value && webSocket.latency.value > 0" class="latency">
+                  ({{ webSocket.latency.value }}ms)
+                </span>
+              </div>
+            </div>
+        </template>
+
+        <!-- リアルタイム統計 -->
+        <el-row :gutter="16">
+          <el-col :span="6" v-for="stat in statsCards" :key="stat.key">
+            <el-card :body-style="{ padding: '20px' }" shadow="hover">
+              <el-statistic
+                :value="stat.value"
+                :title="stat.title"
+                :prefix="stat.icon"
+              />
+            </el-card>
+          </el-col>
+        </el-row>
+      </el-card>
+    </el-col>
+  </el-row>
+
+  <!-- リアルタイムログとアラート -->
+  <el-row :gutter="20" class="mb-4" v-if="webSocket.isConnected.value">
+    <el-col :span="12">
+      <el-card>
+        <template #header>
+          <div class="card-header">
+            <span>📡 リアルタイムログ</span>
+            <el-button @click="webSocket.clearLogs" size="small" type="text">クリア</el-button>
+          </div>
+        </template>
+        <div class="realtime-logs">
+          <div
+            v-for="log in webSocket.newLogs.value.slice(0, 10)"
+            :key="log.id"
+            class="realtime-log-item"
+            :class="`level-${log.level}`"
+          >
+            <div class="log-time">{{ formatTimestamp(log.timestamp) }}</div>
+            <div class="log-content">
+              <el-tag :color="LOG_LEVEL_COLORS[log.level]" size="small" effect="dark">
+                {{ LOG_LEVEL_NAMES[log.level] }}
+              </el-tag>
+              <span class="log-message">{{ log.message }}</span>
+            </div>
+          </div>
+          <div v-if="webSocket.newLogs.value.length === 0" class="no-logs">
+            リアルタイムログを待機中...
+          </div>
+        </div>
+      </el-card>
+    </el-col>
+
+    <el-col :span="12">
+      <el-card>
+        <template #header>
+          <div class="card-header">
+            <span>🚨 リアルタイムアラート</span>
+            <el-button @click="webSocket.clearAlerts" size="small" type="text">クリア</el-button>
+          </div>
+        </template>
+        <div class="realtime-alerts">
+          <div
+            v-for="(alert, index) in webSocket.alerts.value.slice(0, 5)"
+            :key="index"
+            class="realtime-alert-item"
+            :class="`alert-${alert.level}`"
+          >
+            <div class="alert-header">
+              <el-tag
+                :type="alert.level === 'critical' ? 'danger' :
+                      alert.level === 'error' ? 'danger' :
+                      alert.level === 'warning' ? 'warning' : 'info'"
+                size="small"
+              >
+                {{ alert.level.toUpperCase() }}
+              </el-tag>
+              <el-button
+                @click="webSocket.dismissAlert(index)"
+                size="small"
+                type="text"
+                icon="Close"
+              />
+            </div>
+            <div class="alert-message">{{ alert.message }}</div>
+          </div>
+          <div v-if="webSocket.alerts.value.length === 0" class="no-alerts">
+            アラートはありません
+          </div>
+        </div>
+      </el-card>
+    </el-col>
+  </el-row>
+
+  <!-- 検索フォーム -->
+  <el-row :gutter="20" class="mb-4">
+    <el-col :span="24">
+      <el-card>
+        <template #header>
+          <div class="card-header">
+            <span>🔍 ログ検索</span>
+            <el-button @click="toggleSearchForm" type="text" icon="Search">
+              {{ searchFormVisible ? '検索フォームを閉じる' : '詳細検索を開く' }}
+            </el-button>
+          </div>
+        </template>
+
+        <!-- 検索フォーム -->
+        <el-collapse-transition>
+          <div v-show="searchFormVisible" class="search-form mb-4">
+            <el-form :model="searchForm" label-width="100px" :inline="true">
+              <el-form-item label="期間">
+                <el-date-picker
+                  v-model="searchForm.dateRange"
+                  type="datetimerange"
+                  range-separator="〜"
+                  start-placeholder="開始日時"
+                  end-placeholder="終了日時"
+                  format="YYYY-MM-DD HH:mm"
+                  value-format="YYYY-MM-DDTHH:mm:ss.SSSZ"
+                />
+              </el-form-item>
+
+              <el-form-item label="レベル">
+                <el-select
+                  v-model="searchForm.levels"
+                  multiple
+                  placeholder="ログレベル選択"
+                  style="width: 200px"
+                >
+                  <el-option
+                    v-for="level in LOG_LEVELS"
+                    :key="level.value"
+                    :label="level.label"
+                    :value="level.value"
+                  />
+                </el-select>
+              </el-form-item>
+
+              <el-form-item label="カテゴリ">
+                <el-select
+                  v-model="searchForm.categories"
+                  multiple
+                  placeholder="カテゴリ選択"
+                  style="width: 200px"
+                >
+                  <el-option label="認証" value="AUTH" />
+                  <el-option label="API" value="API" />
+                  <el-option label="データベース" value="DB" />
+                  <el-option label="セキュリティ" value="SEC" />
+                  <el-option label="システム" value="SYS" />
+                  <el-option label="ユーザー" value="USER" />
+                  <el-option label="パフォーマンス" value="PERF" />
+                  <el-option label="エラー" value="ERR" />
+                </el-select>
+              </el-form-item>
+
+              <el-form-item label="検索">
+                <el-input
+                  v-model="searchForm.query"
+                  placeholder="メッセージ検索"
+                  style="width: 200px"
+                  clearable
+                />
+              </el-form-item>
+
+              <el-form-item>
+                <el-button type="primary" @click="performSearch" :loading="searchLoading" icon="Search">
+                  検索
+                </el-button>
+                <el-button @click="resetSearch" icon="Refresh">
+                  リセット
+                </el-button>
+                <el-dropdown @command="exportLogs">
+                  <el-button type="warning" icon="Download">
+                    エクスポート <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+                  </el-button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item command="json">JSON形式</el-dropdown-item>
+                      <el-dropdown-item command="csv">CSV形式</el-dropdown-item>
+                    </el-dropdown-menu>
                   </template>
-                </el-statistic>
-              </el-card>
-            </el-col>
-          </el-row>
-        </el-card>
-      </el-col>
-    </el-row>
+                </el-dropdown>
+              </el-form-item>
+            </el-form>
+          </div>
+        </el-collapse-transition>
+      </el-card>
+    </el-col>
+  </el-row>
 
     <el-row :gutter="20">
       <!-- ログ検索 -->
@@ -140,6 +322,17 @@
                   <el-button @click="resetSearch" icon="Refresh">
                     リセット
                   </el-button>
+                  <el-dropdown @command="exportLogs">
+                    <el-button type="warning" icon="Download">
+                      エクスポート <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+                    </el-button>
+                    <template #dropdown>
+                      <el-dropdown-menu>
+                        <el-dropdown-item command="json">JSON形式</el-dropdown-item>
+                        <el-dropdown-item command="csv">CSV形式</el-dropdown-item>
+                      </el-dropdown-menu>
+                    </template>
+                  </el-dropdown>
                 </el-form-item>
               </el-form>
             </div>
@@ -403,9 +596,12 @@ import {
   ArrowDown,
   Refresh,
   Check,
-  View
+  View,
+  Download
 } from '@element-plus/icons-vue'
 import { useLogService, useLogSearch, useRealtimeStats } from '@/composables/useLogService'
+import { useWebSocket, useWebSocketHeartbeat } from '@/composables/useWebSocket'
+import { useAuthStore } from '@/stores/auth'
 import {
   LOG_LEVEL_NAMES,
   LOG_LEVEL_COLORS,
@@ -419,6 +615,9 @@ import type { LogEntry, LogLevel, LogCategory } from '@/types/log'
 const logService = useLogService()
 const logSearch = useLogSearch()
 const realtimeStats = useRealtimeStats()
+const webSocket = useWebSocket()
+const authStore = useAuthStore()
+useWebSocketHeartbeat(webSocket)
 
 // リアルタイム統計
 const { stats, loading: statsLoading, fetchStats: refreshStats } = realtimeStats
@@ -518,6 +717,57 @@ const resetSearch = () => {
   })
   logSearch.resetSearch()
   performSearch()
+}
+
+// ログエクスポート機能
+const exportLogs = async (format: 'json' | 'csv') => {
+  try {
+    const params = new URLSearchParams()
+
+    // 検索条件をエクスポートパラメータに追加
+    if (searchForm.levels.length > 0) {
+      params.append('levels', searchForm.levels.join(','))
+    }
+    if (searchForm.categories.length > 0) {
+      params.append('categories', searchForm.categories.join(','))
+    }
+    if (searchForm.query) {
+      params.append('query', searchForm.query)
+    }
+    if (searchForm.dateRange.length === 2) {
+      params.append('startTime', searchForm.dateRange[0])
+      params.append('endTime', searchForm.dateRange[1])
+    }
+    params.append('format', format)
+
+    // API エンドポイントを呼び出してファイルをダウンロード
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/logs/export?${params}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('エクスポートに失敗しました')
+    }
+
+    // ファイルダウンロード
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `logs_${new Date().toISOString().split('T')[0]}.${format}`
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+
+    ElMessage.success(`ログを${format.toUpperCase()}形式でエクスポートしました`)
+  } catch (error: any) {
+    console.error('Export error:', error)
+    ElMessage.error('エクスポートに失敗しました: ' + error.message)
+  }
 }
 
 const showLogDetail = (log: LogEntry) => {
@@ -826,5 +1076,142 @@ onUnmounted(() => {
 .log-item-warning {
   border-left: 4px solid #e6a23c;
   background-color: #fdf6ec;
+}
+
+/* WebSocket接続状況 */
+.websocket-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 16px;
+}
+
+.latency {
+  font-size: 12px;
+  color: #909399;
+}
+
+/* リアルタイムログ */
+.realtime-logs {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.realtime-log-item {
+  padding: 8px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  border-left: 3px solid #dcdfe6;
+  background-color: #f8f9fa;
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.3s ease;
+}
+
+.realtime-log-item.level-60,
+.realtime-log-item.level-50 {
+  border-left-color: #f56c6c;
+  background-color: #fef0f0;
+}
+
+.realtime-log-item.level-40 {
+  border-left-color: #e6a23c;
+  background-color: #fdf5e6;
+}
+
+.realtime-log-item.level-30 {
+  border-left-color: #409eff;
+  background-color: #ecf5ff;
+}
+
+.log-time {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 4px;
+}
+
+.log-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.log-message {
+  font-size: 14px;
+  flex: 1;
+}
+
+.no-logs,
+.no-alerts {
+  text-align: center;
+  padding: 20px;
+  color: #909399;
+  font-style: italic;
+}
+
+/* リアルタイムアラート */
+.realtime-alerts {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.realtime-alert-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  border: 1px solid #dcdfe6;
+  background-color: #fff;
+  transition: all 0.3s ease;
+  animation: slideInRight 0.3s ease;
+}
+
+.realtime-alert-item.alert-critical {
+  border-color: #f56c6c;
+  background-color: #fef0f0;
+  box-shadow: 0 2px 8px rgba(245, 108, 108, 0.2);
+}
+
+.realtime-alert-item.alert-error {
+  border-color: #f56c6c;
+  background-color: #fef0f0;
+}
+
+.realtime-alert-item.alert-warning {
+  border-color: #e6a23c;
+  background-color: #fdf5e6;
+}
+
+.alert-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.alert-message {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* アニメーション */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 </style>

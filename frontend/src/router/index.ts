@@ -37,6 +37,12 @@ const routes: RouteRecordRaw[] = [
         name: 'LogMonitoring',
         component: () => import('@/views/LogMonitoring.vue'),
         meta: { title: 'ログ監視システム' }
+      },
+      {
+        path: 'alert-rules',
+        name: 'AlertRules',
+        component: () => import('@/views/AlertRules.vue'),
+        meta: { title: 'アラートルール管理' }
       }
     ]
   },
