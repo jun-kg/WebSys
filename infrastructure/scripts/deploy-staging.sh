@@ -68,21 +68,21 @@ echo -e "${BLUE}🐳 ステージング環境デプロイ...${NC}"
 
 # ステージング環境起動
 cd infrastructure/docker/staging
-docker-compose --env-file ../../../environments/staging/.env down
-docker-compose --env-file ../../../environments/staging/.env up -d --build
+docker compose --env-file ../../../environments/staging/.env down
+docker compose --env-file ../../../environments/staging/.env up -d --build
 
 echo -e "${BLUE}⏳ サービス起動待機...${NC}"
 sleep 30
 
 # データベースマイグレーション
 echo -e "${BLUE}📊 データベースマイグレーション実行...${NC}"
-docker-compose --env-file ../../../environments/staging/.env exec -T backend npx prisma migrate deploy
+docker compose --env-file ../../../environments/staging/.env exec -T backend npx prisma migrate deploy
 
 # シード実行（初回のみ）
 read -p "データベースシードを実行しますか？ (y/N): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    docker-compose --env-file ../../../environments/staging/.env exec -T backend npm run prisma:seed
+    docker compose --env-file ../../../environments/staging/.env exec -T backend npm run prisma:seed
 fi
 
 echo -e "${BLUE}🔍 ヘルスチェック実行...${NC}"
@@ -128,6 +128,6 @@ if check_service "Backend API" "http://localhost:8000/health" && \
 else
     echo -e "${RED}❌ デプロイに失敗しました${NC}"
     echo "ログを確認してください:"
-    echo "docker-compose logs -f"
+    echo "docker compose logs -f"
     exit 1
 fi

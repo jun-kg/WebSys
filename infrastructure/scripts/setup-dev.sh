@@ -25,7 +25,7 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+if ! docker compose version &> /dev/null; then
     echo -e "${RED}❌ Docker Composeがインストールされていません${NC}"
     exit 1
 fi
@@ -66,8 +66,8 @@ done
 # Start services
 echo -e "${BLUE}🐳 開発環境を起動しています...${NC}"
 cd infrastructure/docker/development
-docker-compose --env-file ../../../environments/development/.env down --remove-orphans
-docker-compose --env-file ../../../environments/development/.env up -d --build
+docker compose --env-file ../../../environments/development/.env down --remove-orphans
+docker compose --env-file ../../../environments/development/.env up -d --build
 
 # Health checks
 echo -e "${BLUE}⏳ サービスの起動を待っています...${NC}"
@@ -96,7 +96,7 @@ check_service() {
 }
 
 # Check PostgreSQL
-if docker-compose --env-file ../../../environments/development/.env exec -T postgres pg_isready -U admin > /dev/null 2>&1; then
+if docker compose --env-file ../../../environments/development/.env exec -T postgres pg_isready -U admin > /dev/null 2>&1; then
     echo -e "${GREEN}✅ PostgreSQL: 正常${NC}"
 else
     echo -e "${RED}❌ PostgreSQL: 起動失敗${NC}"
@@ -108,7 +108,7 @@ check_service "Frontend" "http://localhost:3000"
 
 # Run migrations
 echo -e "${BLUE}📊 データベースマイグレーションを実行しています...${NC}"
-docker-compose --env-file ../../../environments/development/.env exec backend npx prisma migrate dev --name init || echo -e "${YELLOW}⚠️  マイグレーションは後で実行してください${NC}"
+docker compose --env-file ../../../environments/development/.env exec backend npx prisma migrate dev --name init || echo -e "${YELLOW}⚠️  マイグレーションは後で実行してください${NC}"
 
 echo ""
 echo "==================================="
@@ -124,7 +124,7 @@ echo -e "${BLUE}📁 開発ディレクトリ:${NC}"
 echo "  workspace/                    # 👈 ここでコーディング"
 echo ""
 echo -e "${BLUE}📝 よく使うコマンド:${NC}"
-echo "  停止: cd infrastructure/docker/development && docker-compose down"
-echo "  ログ: cd infrastructure/docker/development && docker-compose logs -f [service]"
+echo "  停止: cd infrastructure/docker/development && docker compose down"
+echo "  ログ: cd infrastructure/docker/development && docker compose logs -f [service]"
 echo "  リセット: ./infrastructure/scripts/reset-dev.sh"
 echo ""

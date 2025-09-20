@@ -4,14 +4,18 @@
   "main": "src/index.ts",
   "module": "src/index.ts",
   "types": "src/index.ts",
-  "files": ["src"],
+  "files": [
+    "src"
+  ],
   "scripts": {
     "build": "echo 'Build not configured yet'",
     "dev": "echo 'Dev mode not configured yet'"
   },
   "dependencies": {
-    "vue": "^3.4.15",
-    "element-plus": "^2.5.1"
+    "@types/prismjs": "^1.26.5",
+    "element-plus": "^2.5.1",
+    "prismjs": "^1.30.0",
+    "vue": "^3.4.15"
   },
   "devDependencies": {
     "typescript": "^5.3.3"

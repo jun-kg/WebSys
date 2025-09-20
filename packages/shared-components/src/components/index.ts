@@ -13,6 +13,7 @@ import CommonInput from './CommonInput/index.vue'
 import CommonSelect from './CommonSelect/index.vue'
 import CommonOption from './CommonOption/index.vue'
 import CommonSwitch from './CommonSwitch/index.vue'
+import CodePreview from './CodePreview/index.vue'
 
 export {
   CommonButton,
@@ -29,7 +30,8 @@ export {
   CommonInput,
   CommonSelect,
   CommonOption,
-  CommonSwitch
+  CommonSwitch,
+  CodePreview
 }
 
 export default {
@@ -47,5 +49,6 @@ export default {
   CommonInput,
   CommonSelect,
   CommonOption,
-  CommonSwitch
+  CommonSwitch,
+  CodePreview
 }

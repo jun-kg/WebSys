@@ -114,7 +114,7 @@ fi
 cp docker-compose.yml docker-compose.green.yml
 
 echo -e "${BLUE}🟢 Green環境起動中...${NC}"
-docker-compose -f docker-compose.green.yml --env-file ../../../environments/production/.env up -d --build
+docker compose -f docker-compose.green.yml --env-file ../../../environments/production/.env up -d --build
 
 echo -e "${BLUE}⏳ Green環境起動待機...${NC}"
 sleep 60
@@ -151,7 +151,7 @@ check_green_service "Frontend" "http://localhost:3001"
 
 if [ "$GREEN_HEALTHY" = true ]; then
     echo -e "${BLUE}📊 データベースマイグレーション実行...${NC}"
-    docker-compose -f docker-compose.green.yml --env-file ../../../environments/production/.env exec -T backend npx prisma migrate deploy
+    docker compose -f docker-compose.green.yml --env-file ../../../environments/production/.env exec -T backend npx prisma migrate deploy
 
     echo -e "${BLUE}🔄 トラフィック切り替え...${NC}"
 
@@ -159,7 +159,7 @@ if [ "$GREEN_HEALTHY" = true ]; then
     # ここではシンボリックリンクで切り替えをシミュレート
     if [ -f "docker-compose.blue.yml" ]; then
         echo -e "${YELLOW}⚠️  Blue環境停止中...${NC}"
-        docker-compose -f docker-compose.blue.yml down
+        docker compose -f docker-compose.blue.yml down
     fi
 
     # Green環境をアクティブにする
@@ -186,23 +186,23 @@ if [ "$GREEN_HEALTHY" = true ]; then
     echo "  4. パフォーマンス確認"
     echo ""
     echo -e "${YELLOW}⚠️  ロールバック方法:${NC}"
-    echo "  docker-compose -f docker-compose.blue.yml up -d"
+    echo "  docker compose -f docker-compose.blue.yml up -d"
 
 else
     echo -e "${RED}❌ Green環境のヘルスチェックに失敗しました${NC}"
     echo -e "${YELLOW}🔄 ロールバック実行中...${NC}"
 
     # Green環境停止
-    docker-compose -f docker-compose.green.yml down
+    docker compose -f docker-compose.green.yml down
 
     # Blue環境復旧（存在する場合）
     if [ -f "docker-compose.blue.yml" ]; then
-        docker-compose -f docker-compose.blue.yml up -d
+        docker compose -f docker-compose.blue.yml up -d
         echo -e "${GREEN}✅ Blue環境に復旧しました${NC}"
     fi
 
     echo -e "${RED}❌ 本番デプロイに失敗しました${NC}"
     echo "ログを確認してください:"
-    echo "docker-compose -f docker-compose.green.yml logs"
+    echo "docker compose -f docker-compose.green.yml logs"
     exit 1
 fi
