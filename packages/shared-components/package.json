@@ -1,0 +1,22 @@
+{
+  "name": "@company/shared-components",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "types": "src/index.ts",
+  "files": ["src"],
+  "scripts": {
+    "build": "echo 'Build not configured yet'",
+    "dev": "echo 'Dev mode not configured yet'"
+  },
+  "dependencies": {
+    "vue": "^3.4.15",
+    "element-plus": "^2.5.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "vue": "^3.4.15"
+  }
+}
