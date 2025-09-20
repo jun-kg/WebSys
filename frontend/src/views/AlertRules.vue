@@ -29,7 +29,7 @@
 
           <!-- 統計情報 -->
           <el-row :gutter="16" class="mb-4">
-            <el-col :span="6">
+            <el-col :xs="12" :sm="12" :md="6" :lg="6">
               <el-card :body-style="{ padding: '20px' }" shadow="hover">
                 <el-statistic
                   :value="rules.length"
@@ -41,7 +41,7 @@
                 </el-statistic>
               </el-card>
             </el-col>
-            <el-col :span="6">
+            <el-col :xs="12" :sm="12" :md="6" :lg="6">
               <el-card :body-style="{ padding: '20px' }" shadow="hover">
                 <el-statistic
                   :value="enabledRulesCount"
@@ -53,7 +53,7 @@
                 </el-statistic>
               </el-card>
             </el-col>
-            <el-col :span="6">
+            <el-col :xs="12" :sm="12" :md="6" :lg="6">
               <el-card :body-style="{ padding: '20px' }" shadow="hover">
                 <el-statistic
                   :value="disabledRulesCount"
@@ -65,7 +65,7 @@
                 </el-statistic>
               </el-card>
             </el-col>
-            <el-col :span="6">
+            <el-col :xs="12" :sm="12" :md="6" :lg="6">
               <el-card :body-style="{ padding: '20px' }" shadow="hover">
                 <el-statistic
                   :value="criticalRulesCount"
@@ -357,6 +357,7 @@ import {
   Refresh
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+import api from '@/utils/api'
 import {
   LOG_LEVEL_NAMES,
   LOG_CATEGORY_NAMES,
@@ -426,21 +427,11 @@ const refreshRules = async () => {
       params.append('isEnabled', (statusFilter.value === 'enabled').toString())
     }
 
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/alert-rules?${params}`, {
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`
-      }
-    })
-
-    if (!response.ok) {
-      throw new Error('アラートルールの取得に失敗しました')
-    }
-
-    const data = await response.json()
+    const data = await api.get(`/alert-rules?${params}`)
     rules.value = data.rules
     total.value = data.total
   } catch (error: any) {
-    ElMessage.error(error.message)
+    ElMessage.error(error.message || 'アラートルールの取得に失敗しました')
   } finally {
     loading.value = false
   }
@@ -485,27 +476,18 @@ const saveRule = async () => {
     await formRef.value.validate()
     saving.value = true
 
-    const url = editingRule.value
-      ? `${import.meta.env.VITE_API_BASE_URL}/api/alert-rules/${editingRule.value.id}`
-      : `${import.meta.env.VITE_API_BASE_URL}/api/alert-rules`
+    const endpoint = editingRule.value
+      ? `/alert-rules/${editingRule.value.id}`
+      : `/alert-rules`
 
-    const method = editingRule.value ? 'PUT' : 'POST'
-
-    const response = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authStore.token}`
-      },
-      body: JSON.stringify(form)
-    })
-
-    if (!response.ok) {
-      throw new Error('アラートルールの保存に失敗しました')
+    let data
+    if (editingRule.value) {
+      data = await api.put(endpoint, form)
+    } else {
+      data = await api.post(endpoint, form)
     }
 
-    const data = await response.json()
-    ElMessage.success(data.message)
+    ElMessage.success(data.message || 'アラートルールを保存しました')
     dialogVisible.value = false
     refreshRules()
   } catch (error: any) {

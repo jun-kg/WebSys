@@ -7,6 +7,7 @@ import authRoutes from './routes/auth.js'
 import userRoutes from './routes/users.js'
 import logRoutes from './routes/logs.js'
 import alertRuleRoutes from './routes/alertRules.js'
+import notificationRoutes from './routes/notifications.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { initializeWebSocketService } from './services/WebSocketService.js'
 
@@ -21,7 +22,12 @@ const webSocketService = initializeWebSocketService(httpServer)
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: [
+    process.env.FRONTEND_URL || "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002",
+    "http://localhost:3003"
+  ],
   credentials: true
 }))
 app.use(express.json())
@@ -43,6 +49,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/logs', logRoutes)
 app.use('/api/alert-rules', alertRuleRoutes)
+app.use('/api/notifications', notificationRoutes)
 
 // WebSocket接続状況API
 app.get('/api/websocket/status', (req, res) => {

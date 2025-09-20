@@ -6,6 +6,8 @@
 import { PrismaClient } from '@prisma/client'
 import { LogEntry } from '../types/log'
 import { getWebSocketService } from './WebSocketService.js'
+import { getNotificationService } from './NotificationService.js'
+import type { NotificationMessage } from './NotificationService.js'
 
 export class AlertRuleEngine {
   private prisma: PrismaClient
@@ -112,13 +114,79 @@ export class AlertRuleEngine {
         }
       })
 
-      // 将来的な拡張: 外部通知チャンネルへの送信
-      // await this.sendExternalNotifications(rule, alertMessage, triggeringLog)
+      // 外部通知チャンネルへの送信
+      await this.sendExternalNotifications(rule, alertMessage, triggeringLog, alertLevel)
 
       console.log(`アラート発動: ${rule.name} - ${alertMessage}`)
     } catch (error) {
       console.error('アラート発動エラー:', error)
     }
+  }
+
+  /**
+   * 外部通知サービスに通知を送信
+   */
+  private async sendExternalNotifications(
+    rule: any,
+    alertMessage: string,
+    triggeringLog: LogEntry,
+    alertLevel: 'info' | 'warning' | 'error' | 'critical'
+  ): Promise<void> {
+    try {
+      const notificationService = getNotificationService()
+
+      // 通知チャンネル設定を取得（ルールの設定から、または環境変数から）
+      let channels: ('slack' | 'email' | 'teams')[] = ['slack', 'email']
+
+      if (rule.notificationChannels) {
+        try {
+          const ruleChannels = typeof rule.notificationChannels === 'string'
+            ? JSON.parse(rule.notificationChannels)
+            : rule.notificationChannels
+          if (Array.isArray(ruleChannels) && ruleChannels.length > 0) {
+            channels = ruleChannels
+          }
+        } catch (e) {
+          console.warn('通知チャンネル設定の解析に失敗:', e)
+        }
+      }
+
+      const notification: NotificationMessage = {
+        title: `アラート: ${rule.name}`,
+        message: alertMessage,
+        level: alertLevel,
+        timestamp: new Date().toISOString(),
+        logEntry: triggeringLog,
+        details: {
+          ルール名: rule.name,
+          説明: rule.description || '説明なし',
+          閾値: `${rule.thresholdCount}回 / ${rule.thresholdPeriod}秒`,
+          カテゴリ: triggeringLog.category,
+          ソース: triggeringLog.source,
+          レベル: this.getLogLevelName(triggeringLog.level),
+          発生時刻: new Date(triggeringLog.timestamp).toLocaleString('ja-JP')
+        }
+      }
+
+      await notificationService.send(notification, channels)
+    } catch (error) {
+      console.error('外部通知送信エラー:', error)
+    }
+  }
+
+  /**
+   * ログレベル数値を名前に変換
+   */
+  private getLogLevelName(level: number): string {
+    const levels: Record<number, string> = {
+      10: 'TRACE',
+      20: 'DEBUG',
+      30: 'INFO',
+      40: 'WARN',
+      50: 'ERROR',
+      60: 'FATAL'
+    }
+    return levels[level] || 'UNKNOWN'
   }
 
   /**

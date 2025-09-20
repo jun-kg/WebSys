@@ -119,6 +119,20 @@ const handleLogin = async () => {
 .login-card {
   width: 400px;
   padding: 20px;
+  max-width: 90%;
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    width: 100%;
+    max-width: 350px;
+    padding: 15px;
+  }
+
+  .login-title {
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
 }
 
 .login-title {

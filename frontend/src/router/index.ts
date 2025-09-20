@@ -43,6 +43,12 @@ const routes: RouteRecordRaw[] = [
         name: 'AlertRules',
         component: () => import('@/views/AlertRules.vue'),
         meta: { title: 'アラートルール管理' }
+      },
+      {
+        path: 'notification-settings',
+        name: 'NotificationSettings',
+        component: () => import('@/views/NotificationSettings.vue'),
+        meta: { title: '通知設定' }
       }
     ]
   },

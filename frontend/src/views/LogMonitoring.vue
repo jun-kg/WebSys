@@ -60,13 +60,19 @@
 
         <!-- リアルタイム統計 -->
         <el-row :gutter="16">
-          <el-col :span="6" v-for="stat in statsCards" :key="stat.key">
+          <el-col :xs="12" :sm="12" :md="6" :lg="6" v-for="stat in statsCards" :key="stat.key">
             <el-card :body-style="{ padding: '20px' }" shadow="hover">
               <el-statistic
                 :value="stat.value"
                 :title="stat.title"
-                :prefix="stat.icon"
-              />
+                :precision="0"
+              >
+                <template #prefix>
+                  <el-icon :style="{ color: stat.color }">
+                    <component :is="stat.icon" />
+                  </el-icon>
+                </template>
+              </el-statistic>
             </el-card>
           </el-col>
         </el-row>
@@ -76,7 +82,7 @@
 
   <!-- リアルタイムログとアラート -->
   <el-row :gutter="20" class="mb-4" v-if="webSocket.isConnected.value">
-    <el-col :span="12">
+    <el-col :xs="24" :sm="24" :md="12" :lg="12">
       <el-card>
         <template #header>
           <div class="card-header">
@@ -106,7 +112,7 @@
       </el-card>
     </el-col>
 
-    <el-col :span="12">
+    <el-col :xs="24" :sm="24" :md="12" :lg="12">
       <el-card>
         <template #header>
           <div class="card-header">
@@ -247,7 +253,7 @@
 
     <el-row :gutter="20">
       <!-- ログ検索 -->
-      <el-col :span="16">
+      <el-col :xs="24" :sm="24" :md="16" :lg="16">
         <el-card>
           <template #header>
             <div class="card-header">
@@ -419,7 +425,7 @@
       </el-col>
 
       <!-- サイドパネル -->
-      <el-col :span="8">
+      <el-col :xs="24" :sm="24" :md="8" :lg="8">
         <el-card class="mb-4">
           <template #header>
             <div class="card-header">
