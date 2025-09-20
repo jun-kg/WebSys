@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: websys_nginx_staging
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - websys_network_staging
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: websys_frontend_staging
+    restart: unless-stopped
+    environment:
+      NODE_ENV: staging
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://api-staging.websys.company.com}
+    networks:
+      - websys_network_staging
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: websys_backend_staging
+    restart: unless-stopped
+    environment:
+      NODE_ENV: staging
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - websys_network_staging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: websys_postgres_staging
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-websys_db_staging}
+      TZ: Asia/Tokyo
+    volumes:
+      - postgres_data_staging:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - websys_network_staging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:alpine
+    container_name: websys_redis_staging
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data_staging:/data
+    networks:
+      - websys_network_staging
+
+volumes:
+  postgres_data_staging:
+  redis_data_staging:
+
+networks:
+  websys_network_staging:
+    driver: bridge

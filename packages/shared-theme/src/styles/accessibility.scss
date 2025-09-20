@@ -1,0 +1,535 @@
+/**
+ * アクセシビリティ専用スタイル
+ * ユニバーサルデザイン・WCAG準拠
+ */
+
+// ===== タッチターゲットサイズ =====
+:root {
+  // タッチターゲット（最小44px推奨）
+  --touch-target-min: 44px;
+  --touch-target-comfortable: 48px;
+  --touch-target-large: 56px;
+
+  // スペーシング（8pxベーススケール）
+  --spacing-0: 0;
+  --spacing-1: 0.25rem;  /* 4px */
+  --spacing-2: 0.5rem;   /* 8px */
+  --spacing-3: 0.75rem;  /* 12px */
+  --spacing-4: 1rem;     /* 16px */
+  --spacing-5: 1.25rem;  /* 20px */
+  --spacing-6: 1.5rem;   /* 24px */
+  --spacing-8: 2rem;     /* 32px */
+  --spacing-10: 2.5rem;  /* 40px */
+  --spacing-12: 3rem;    /* 48px */
+  --spacing-16: 4rem;    /* 64px */
+  --spacing-20: 5rem;    /* 80px */
+
+  // フォーカスリング
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-color: var(--color-primary);
+  --focus-ring-style: solid;
+
+  // アニメーション時間
+  --animation-duration-short: 150ms;
+  --animation-duration-medium: 300ms;
+  --animation-duration-long: 500ms;
+}
+
+// ===== 基本アクセシビリティ設定 =====
+
+// 全要素の基本設定
+* {
+  // ボックスサイジングの統一
+  box-sizing: border-box;
+
+  // フォーカス時のアウトライン除去（カスタムスタイルで対応）
+  &:focus {
+    outline: none;
+  }
+}
+
+// ===== フォーカス管理 =====
+
+// 基本フォーカススタイル
+.focusable,
+button,
+[role="button"],
+input,
+select,
+textarea,
+a[href],
+[tabindex]:not([tabindex="-1"]) {
+  &:focus {
+    outline: var(--focus-ring-width) var(--focus-ring-style) var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+    transition: outline-color var(--animation-duration-short) ease;
+  }
+
+  &:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) var(--focus-ring-style) var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+}
+
+// 強化フォーカス（重要な要素用）
+.focus-enhanced {
+  &:focus,
+  &:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 6px var(--color-focus-ring);
+  }
+}
+
+// スキップリンク
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: var(--color-bg-high-contrast);
+  color: var(--color-text-high-contrast);
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: var(--font-weight-bold);
+  z-index: 10000;
+  transition: top var(--animation-duration-short) ease;
+
+  &:focus {
+    top: 6px;
+  }
+}
+
+// ===== タッチアクセシビリティ =====
+
+// 最小タッチターゲット
+.touch-target {
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.touch-target-comfortable {
+  min-height: var(--touch-target-comfortable);
+  min-width: var(--touch-target-comfortable);
+}
+
+.touch-target-large {
+  min-height: var(--touch-target-large);
+  min-width: var(--touch-target-large);
+}
+
+// タッチ操作のフィードバック
+.touch-feedback {
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
+  }
+
+  &:active::after {
+    width: 120%;
+    height: 120%;
+  }
+}
+
+// ===== スクリーンリーダー対応 =====
+
+// スクリーンリーダー専用（視覚的に隠す）
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+// スクリーンリーダー専用（フォーカス時に表示）
+.sr-only-focusable {
+  @extend .sr-only;
+
+  &:focus,
+  &:active {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    padding: inherit !important;
+    margin: inherit !important;
+    overflow: visible !important;
+    clip: auto !important;
+    white-space: inherit !important;
+  }
+}
+
+// ===== 読みやすさ向上 =====
+
+// 読みやすいテキスト設定
+.readable-text {
+  font-size: var(--font-size-accessible-min);
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-wide);
+  word-spacing: 0.1em;
+  max-width: 70ch; /* 最適な1行文字数 */
+}
+
+// 大きなテキスト
+.large-text {
+  font-size: var(--font-size-accessible-preferred);
+  line-height: var(--line-height-relaxed);
+  letter-spacing: var(--letter-spacing-wider);
+}
+
+// 高コントラストテキスト
+.high-contrast-text {
+  color: var(--color-text-high-contrast);
+  background-color: var(--color-bg-high-contrast);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: 2px;
+}
+
+// ===== 運動機能アクセシビリティ =====
+
+// ホバー無効化（タッチデバイス対応）
+@media (hover: none) and (pointer: coarse) {
+  .hover-effect:hover {
+    /* ホバー効果を無効化 */
+  }
+}
+
+// 運動機能に配慮した設定
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+// ===== 色覚アクセシビリティ =====
+
+// アイコンとテキストの組み合わせ
+.status-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+
+  .status-icon {
+    flex-shrink: 0;
+    width: 1em;
+    height: 1em;
+  }
+}
+
+// 成功状態（色+アイコン）
+.status-success {
+  color: var(--color-success);
+
+  &::before {
+    content: '✓';
+    margin-right: var(--spacing-1);
+    font-weight: var(--font-weight-bold);
+  }
+}
+
+// 警告状態（色+アイコン）
+.status-warning {
+  color: var(--color-warning);
+
+  &::before {
+    content: '⚠';
+    margin-right: var(--spacing-1);
+    font-weight: var(--font-weight-bold);
+  }
+}
+
+// エラー状態（色+アイコン）
+.status-error {
+  color: var(--color-error);
+
+  &::before {
+    content: '✗';
+    margin-right: var(--spacing-1);
+    font-weight: var(--font-weight-bold);
+  }
+}
+
+// 情報状態（色+アイコン）
+.status-info {
+  color: var(--color-info);
+
+  &::before {
+    content: 'ⓘ';
+    margin-right: var(--spacing-1);
+    font-weight: var(--font-weight-bold);
+  }
+}
+
+// ===== フォーム要素アクセシビリティ =====
+
+// 必須フィールドマーカー
+.required-field::after {
+  content: ' *';
+  color: var(--color-error);
+  font-weight: var(--font-weight-bold);
+}
+
+// エラーメッセージ
+.error-message {
+  color: var(--color-error);
+  font-size: var(--font-size-sm);
+  margin-top: var(--spacing-1);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-1);
+
+  &::before {
+    content: '⚠';
+    flex-shrink: 0;
+    font-weight: var(--font-weight-bold);
+  }
+}
+
+// ヘルプテキスト
+.help-text {
+  color: var(--color-text-medium-contrast);
+  font-size: var(--font-size-sm);
+  margin-top: var(--spacing-1);
+  line-height: var(--line-height-normal);
+}
+
+// ===== テーブルアクセシビリティ =====
+
+// アクセシブルテーブル
+.accessible-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+
+  th,
+  td {
+    padding: var(--spacing-3) var(--spacing-4);
+    text-align: left;
+    border-bottom: 1px solid var(--color-border-light);
+  }
+
+  th {
+    background-color: var(--color-bg-medium-contrast);
+    font-weight: var(--font-weight-bold);
+    border-bottom: 2px solid var(--color-border-medium);
+  }
+
+  tr:nth-child(even) {
+    background-color: var(--color-bg-low-contrast);
+  }
+
+  tr:hover {
+    background-color: var(--color-hover);
+  }
+
+  // フォーカス可能な行
+  tr[tabindex] {
+    &:focus {
+      outline: var(--focus-ring-width) var(--focus-ring-style) var(--focus-ring-color);
+      outline-offset: -1px;
+    }
+  }
+}
+
+// ===== ランドマーク要素 =====
+
+// メインコンテンツ
+main {
+  outline: none;
+}
+
+// ナビゲーション
+nav {
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  a {
+    display: block;
+    padding: var(--spacing-2) var(--spacing-4);
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color var(--animation-duration-short) ease;
+
+    &:hover,
+    &:focus {
+      background-color: var(--color-hover);
+    }
+
+    &[aria-current="page"] {
+      background-color: var(--color-primary);
+      color: var(--color-white);
+      font-weight: var(--font-weight-bold);
+    }
+  }
+}
+
+// ===== モーダルアクセシビリティ =====
+
+// モーダルオーバーレイ
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+// モーダルダイアログ
+.modal-dialog {
+  background: var(--color-bg-high-contrast);
+  border-radius: 8px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+  position: relative;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+// モーダル見出し
+.modal-title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  margin: 0 0 var(--spacing-4) 0;
+  padding: var(--spacing-6) var(--spacing-6) 0;
+}
+
+// モーダルコンテンツ
+.modal-content {
+  padding: 0 var(--spacing-6) var(--spacing-6);
+}
+
+// ===== ライブリージョン =====
+
+// 動的コンテンツ領域
+.live-region {
+  position: absolute;
+  left: -10000px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+
+  &[aria-live="polite"],
+  &[aria-live="assertive"] {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+  }
+}
+
+// ===== ズーム対応 =====
+
+// 200%ズーム対応
+@media (min-resolution: 192dpi) {
+  .zoom-friendly {
+    transform-origin: top left;
+  }
+}
+
+// ===== 印刷アクセシビリティ =====
+
+@media print {
+  // スキップリンクを非表示
+  .skip-link {
+    display: none;
+  }
+
+  // フォーカス表示を無効化
+  *:focus {
+    outline: none;
+  }
+
+  // 改ページを適切に
+  .page-break-before {
+    page-break-before: always;
+  }
+
+  .page-break-after {
+    page-break-after: always;
+  }
+
+  .page-break-inside-avoid {
+    page-break-inside: avoid;
+  }
+
+  // リンクURLを表示
+  a[href]:after {
+    content: " (" attr(href) ")";
+    font-size: smaller;
+  }
+
+  // 略語の展開
+  abbr[title]:after {
+    content: " (" attr(title) ")";
+  }
+}
+
+// ===== デバッグ用 =====
+
+// アクセシビリティ問題の可視化（開発時のみ）
+.debug-accessibility {
+  // alt属性のない画像
+  img:not([alt]) {
+    border: 3px solid red !important;
+  }
+
+  // aria-label/aria-labelledbyのないボタン
+  button:not([aria-label]):not([aria-labelledby]) {
+    border: 3px solid orange !important;
+  }
+
+  // 適切でない見出し構造
+  h1 + h3,
+  h2 + h4,
+  h3 + h5,
+  h4 + h6 {
+    border: 3px solid yellow !important;
+  }
+
+  // フォーカス可能だがtabindexのない要素
+  [onclick]:not([tabindex]):not(button):not(a):not(input):not(select):not(textarea) {
+    border: 3px solid blue !important;
+  }
+}

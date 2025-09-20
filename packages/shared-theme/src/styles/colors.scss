@@ -1,0 +1,353 @@
+/**
+ * ユニバーサルデザイン対応カラーパレット
+ * WCAG準拠・色覚アクセシビリティ対応
+ */
+
+:root {
+  // ===== メインカラー（色覚バリアフリー対応） =====
+  --color-primary: #0066CC;      /* 青（判別しやすい） */
+  --color-primary-50: #EBF4FF;
+  --color-primary-100: #DBEAFE;
+  --color-primary-200: #BFDBFE;
+  --color-primary-300: #93C5FD;
+  --color-primary-400: #60A5FA;
+  --color-primary-500: #3B82F6;
+  --color-primary-600: #0066CC;  /* メイン */
+  --color-primary-700: #1D4ED8;
+  --color-primary-800: #1E40AF;
+  --color-primary-900: #1E3A8A;
+
+  --color-secondary: #6B46C1;    /* 紫（区別可能） */
+  --color-secondary-50: #F5F3FF;
+  --color-secondary-100: #EDE9FE;
+  --color-secondary-200: #DDD6FE;
+  --color-secondary-300: #C4B5FD;
+  --color-secondary-400: #A78BFA;
+  --color-secondary-500: #8B5CF6;
+  --color-secondary-600: #6B46C1; /* メイン */
+  --color-secondary-700: #7C3AED;
+  --color-secondary-800: #6D28D9;
+  --color-secondary-900: #5B21B6;
+
+  --color-accent: #DC2626;       /* 赤（警告用） */
+  --color-accent-50: #FEF2F2;
+  --color-accent-100: #FEE2E2;
+  --color-accent-200: #FECACA;
+  --color-accent-300: #FCA5A5;
+  --color-accent-400: #F87171;
+  --color-accent-500: #EF4444;
+  --color-accent-600: #DC2626;   /* メイン */
+  --color-accent-700: #B91C1C;
+  --color-accent-800: #991B1B;
+  --color-accent-900: #7F1D1D;
+
+  // ===== セマンティックカラー（WCAG準拠） =====
+  --color-success: #059669;      /* 緑（コントラスト比4.5:1以上） */
+  --color-success-50: #ECFDF5;
+  --color-success-100: #D1FAE5;
+  --color-success-200: #A7F3D0;
+  --color-success-300: #6EE7B7;
+  --color-success-400: #34D399;
+  --color-success-500: #10B981;
+  --color-success-600: #059669;   /* メイン */
+  --color-success-700: #047857;
+  --color-success-800: #065F46;
+  --color-success-900: #064E3B;
+
+  --color-warning: #D97706;      /* オレンジ（色覚障害者でも判別可能） */
+  --color-warning-50: #FFFBEB;
+  --color-warning-100: #FEF3C7;
+  --color-warning-200: #FDE68A;
+  --color-warning-300: #FCD34D;
+  --color-warning-400: #FBBF24;
+  --color-warning-500: #F59E0B;
+  --color-warning-600: #D97706;   /* メイン */
+  --color-warning-700: #B45309;
+  --color-warning-800: #92400E;
+  --color-warning-900: #78350F;
+
+  --color-error: #DC2626;        /* 赤（十分なコントラスト） */
+  --color-error-50: #FEF2F2;
+  --color-error-100: #FEE2E2;
+  --color-error-200: #FECACA;
+  --color-error-300: #FCA5A5;
+  --color-error-400: #F87171;
+  --color-error-500: #EF4444;
+  --color-error-600: #DC2626;    /* メイン */
+  --color-error-700: #B91C1C;
+  --color-error-800: #991B1B;
+  --color-error-900: #7F1D1D;
+
+  --color-info: #0284C7;         /* 水色（情報表示用） */
+  --color-info-50: #F0F9FF;
+  --color-info-100: #E0F2FE;
+  --color-info-200: #BAE6FD;
+  --color-info-300: #7DD3FC;
+  --color-info-400: #38BDF8;
+  --color-info-500: #0EA5E9;
+  --color-info-600: #0284C7;     /* メイン */
+  --color-info-700: #0369A1;
+  --color-info-800: #075985;
+  --color-info-900: #0C4A6E;
+
+  // ===== グレースケール（十分なコントラスト確保） =====
+  --color-gray-50: #F9FAFB;      /* 背景用 */
+  --color-gray-100: #F3F4F6;     /* 軽い背景 */
+  --color-gray-200: #E5E7EB;     /* ボーダー用 */
+  --color-gray-300: #D1D5DB;     /* 非活性要素 */
+  --color-gray-400: #9CA3AF;     /* プレースホルダー */
+  --color-gray-500: #6B7280;     /* 補助テキスト */
+  --color-gray-600: #4B5563;     /* 通常テキスト */
+  --color-gray-700: #374151;     /* 強調テキスト */
+  --color-gray-800: #1F2937;     /* 見出し */
+  --color-gray-900: #111827;     /* 最も強いテキスト */
+
+  // ===== ブラック・ホワイト =====
+  --color-black: #000000;
+  --color-white: #FFFFFF;
+
+  // ===== コントラスト比確保用エイリアス =====
+  --color-text-high-contrast: var(--color-gray-900);     /* 7:1以上 */
+  --color-text-medium-contrast: var(--color-gray-700);   /* 4.5:1以上 */
+  --color-text-low-contrast: var(--color-gray-500);      /* 3:1以上 */
+  --color-bg-high-contrast: var(--color-gray-50);
+  --color-bg-medium-contrast: var(--color-gray-100);
+  --color-bg-low-contrast: var(--color-gray-200);
+
+  // ===== ボーダー用 =====
+  --color-border-light: var(--color-gray-200);
+  --color-border-medium: var(--color-gray-300);
+  --color-border-dark: var(--color-gray-400);
+  --color-border-focus: var(--color-primary-600);
+
+  // ===== フォーカス・ハイライト =====
+  --color-focus: var(--color-primary-600);
+  --color-focus-ring: rgba(6, 102, 204, 0.1);
+  --color-selection: rgba(6, 102, 204, 0.2);
+  --color-highlight: #FFFACD;  /* 薄い黄色 */
+
+  // ===== 状態カラー =====
+  --color-disabled: var(--color-gray-400);
+  --color-disabled-bg: var(--color-gray-100);
+  --color-hover: var(--color-gray-50);
+  --color-active: var(--color-gray-100);
+}
+
+// ===== ダークモード =====
+@media (prefers-color-scheme: dark) {
+  :root {
+    // メインカラー（ダークモード調整）
+    --color-primary: #60A5FA;    /* より明るい青 */
+    --color-secondary: #A78BFA;  /* より明るい紫 */
+    --color-accent: #F87171;     /* より明るい赤 */
+
+    // セマンティックカラー
+    --color-success: #34D399;    /* より明るい緑 */
+    --color-warning: #FBBF24;    /* より明るいオレンジ */
+    --color-error: #F87171;      /* より明るい赤 */
+    --color-info: #38BDF8;       /* より明るい水色 */
+
+    // グレースケール（反転）
+    --color-gray-50: #1F2937;
+    --color-gray-100: #374151;
+    --color-gray-200: #4B5563;
+    --color-gray-300: #6B7280;
+    --color-gray-400: #9CA3AF;
+    --color-gray-500: #D1D5DB;
+    --color-gray-600: #E5E7EB;
+    --color-gray-700: #F3F4F6;
+    --color-gray-800: #F9FAFB;
+    --color-gray-900: #FFFFFF;
+
+    // 背景・テキスト
+    --color-text-high-contrast: var(--color-gray-900);
+    --color-text-medium-contrast: var(--color-gray-700);
+    --color-text-low-contrast: var(--color-gray-500);
+    --color-bg-high-contrast: var(--color-gray-50);
+    --color-bg-medium-contrast: var(--color-gray-100);
+    --color-bg-low-contrast: var(--color-gray-200);
+
+    // ボーダー
+    --color-border-light: var(--color-gray-200);
+    --color-border-medium: var(--color-gray-300);
+    --color-border-dark: var(--color-gray-400);
+
+    // フォーカス・選択
+    --color-focus-ring: rgba(96, 165, 250, 0.2);
+    --color-selection: rgba(96, 165, 250, 0.3);
+    --color-highlight: #3B2F00;  /* ダークな黄色 */
+
+    // 状態
+    --color-disabled: var(--color-gray-400);
+    --color-disabled-bg: var(--color-gray-100);
+    --color-hover: var(--color-gray-100);
+    --color-active: var(--color-gray-200);
+  }
+}
+
+// ===== 高コントラストモード =====
+@media (prefers-contrast: high) {
+  :root {
+    // より強いコントラスト
+    --color-primary: #0052A3;    /* より濃い青 */
+    --color-success: #006F47;    /* より濃い緑 */
+    --color-warning: #B85A00;    /* より濃いオレンジ */
+    --color-error: #B91C1C;      /* より濃い赤 */
+
+    // テキスト・背景
+    --color-text-high-contrast: var(--color-black);
+    --color-bg-high-contrast: var(--color-white);
+
+    // ボーダーを強調
+    --color-border-light: var(--color-gray-400);
+    --color-border-medium: var(--color-gray-600);
+    --color-border-dark: var(--color-gray-800);
+  }
+}
+
+// ===== カラーユーティリティクラス =====
+
+// テキストカラー
+.text-primary { color: var(--color-primary); }
+.text-secondary { color: var(--color-secondary); }
+.text-accent { color: var(--color-accent); }
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+.text-error { color: var(--color-error); }
+.text-info { color: var(--color-info); }
+
+// グレースケールテキスト
+.text-gray-50 { color: var(--color-gray-50); }
+.text-gray-100 { color: var(--color-gray-100); }
+.text-gray-200 { color: var(--color-gray-200); }
+.text-gray-300 { color: var(--color-gray-300); }
+.text-gray-400 { color: var(--color-gray-400); }
+.text-gray-500 { color: var(--color-gray-500); }
+.text-gray-600 { color: var(--color-gray-600); }
+.text-gray-700 { color: var(--color-gray-700); }
+.text-gray-800 { color: var(--color-gray-800); }
+.text-gray-900 { color: var(--color-gray-900); }
+
+// コントラスト対応テキスト
+.text-high-contrast { color: var(--color-text-high-contrast); }
+.text-medium-contrast { color: var(--color-text-medium-contrast); }
+.text-low-contrast { color: var(--color-text-low-contrast); }
+
+// 背景カラー
+.bg-primary { background-color: var(--color-primary); }
+.bg-secondary { background-color: var(--color-secondary); }
+.bg-accent { background-color: var(--color-accent); }
+.bg-success { background-color: var(--color-success); }
+.bg-warning { background-color: var(--color-warning); }
+.bg-error { background-color: var(--color-error); }
+.bg-info { background-color: var(--color-info); }
+
+// グレースケール背景
+.bg-gray-50 { background-color: var(--color-gray-50); }
+.bg-gray-100 { background-color: var(--color-gray-100); }
+.bg-gray-200 { background-color: var(--color-gray-200); }
+.bg-gray-300 { background-color: var(--color-gray-300); }
+.bg-gray-400 { background-color: var(--color-gray-400); }
+.bg-gray-500 { background-color: var(--color-gray-500); }
+.bg-gray-600 { background-color: var(--color-gray-600); }
+.bg-gray-700 { background-color: var(--color-gray-700); }
+.bg-gray-800 { background-color: var(--color-gray-800); }
+.bg-gray-900 { background-color: var(--color-gray-900); }
+
+// コントラスト対応背景
+.bg-high-contrast { background-color: var(--color-bg-high-contrast); }
+.bg-medium-contrast { background-color: var(--color-bg-medium-contrast); }
+.bg-low-contrast { background-color: var(--color-bg-low-contrast); }
+
+// ボーダーカラー
+.border-primary { border-color: var(--color-primary); }
+.border-secondary { border-color: var(--color-secondary); }
+.border-success { border-color: var(--color-success); }
+.border-warning { border-color: var(--color-warning); }
+.border-error { border-color: var(--color-error); }
+.border-info { border-color: var(--color-info); }
+
+.border-light { border-color: var(--color-border-light); }
+.border-medium { border-color: var(--color-border-medium); }
+.border-dark { border-color: var(--color-border-dark); }
+.border-focus { border-color: var(--color-border-focus); }
+
+// ===== アクセシビリティ強化クラス =====
+
+// 高コントラスト強制
+.force-high-contrast {
+  color: var(--color-text-high-contrast) !important;
+  background-color: var(--color-bg-high-contrast) !important;
+  border-color: var(--color-border-dark) !important;
+}
+
+// フォーカス表示強化
+.enhanced-focus:focus {
+  outline: 3px solid var(--color-focus) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 6px var(--color-focus-ring) !important;
+}
+
+// 選択テキスト
+::selection {
+  background-color: var(--color-selection);
+  color: var(--color-text-high-contrast);
+}
+
+::-moz-selection {
+  background-color: var(--color-selection);
+  color: var(--color-text-high-contrast);
+}
+
+// ===== 色覚障害対応パターン =====
+
+// パターン背景でさらに区別しやすく
+.pattern-success {
+  background-color: var(--color-success);
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(255, 255, 255, 0.1) 10px,
+    rgba(255, 255, 255, 0.1) 20px
+  );
+}
+
+.pattern-warning {
+  background-color: var(--color-warning);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 10px,
+    rgba(255, 255, 255, 0.1) 10px,
+    rgba(255, 255, 255, 0.1) 20px
+  );
+}
+
+.pattern-error {
+  background-color: var(--color-error);
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 10px,
+    rgba(255, 255, 255, 0.1) 10px,
+    rgba(255, 255, 255, 0.1) 20px
+  );
+}
+
+// ===== 印刷対応 =====
+@media print {
+  :root {
+    --color-primary: #000000;
+    --color-secondary: #000000;
+    --color-text-high-contrast: #000000;
+    --color-bg-high-contrast: #FFFFFF;
+    --color-border-light: #000000;
+  }
+
+  * {
+    color: #000000 !important;
+    background: #FFFFFF !important;
+    box-shadow: none !important;
+  }
+}

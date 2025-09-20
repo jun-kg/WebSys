@@ -1,0 +1,69 @@
+{
+  "name": "@company/shared-theme",
+  "version": "1.0.0",
+  "description": "ユニバーサルデザイン対応の共通テーマライブラリ",
+  "type": "module",
+  "main": "src/index.scss",
+  "files": [
+    "src/",
+    "dist/"
+  ],
+  "exports": {
+    ".": {
+      "sass": "./src/index.scss",
+      "style": "./src/index.scss",
+      "default": "./src/index.scss"
+    },
+    "./fonts": {
+      "sass": "./src/styles/fonts.scss",
+      "style": "./src/styles/fonts.scss"
+    },
+    "./colors": {
+      "sass": "./src/styles/colors.scss",
+      "style": "./src/styles/colors.scss"
+    },
+    "./accessibility": {
+      "sass": "./src/styles/accessibility.scss",
+      "style": "./src/styles/accessibility.scss"
+    }
+  },
+  "scripts": {
+    "build": "sass src/index.scss dist/index.css --style=compressed",
+    "build:dev": "sass src/index.scss dist/index.css --style=expanded --source-map",
+    "watch": "sass src/index.scss dist/index.css --watch --style=expanded --source-map",
+    "lint": "stylelint 'src/**/*.scss'",
+    "lint:fix": "stylelint 'src/**/*.scss' --fix",
+    "test": "sass src/index.scss dist/test.css --style=expanded && echo 'テーマコンパイル成功'"
+  },
+  "keywords": [
+    "css",
+    "scss",
+    "theme",
+    "universal-design",
+    "accessibility",
+    "ud-gothic",
+    "wcag",
+    "企業システム",
+    "共通テーマ"
+  ],
+  "author": "Company Dev Team",
+  "license": "MIT",
+  "devDependencies": {
+    "sass": "^1.69.0",
+    "stylelint": "^15.0.0",
+    "stylelint-config-standard-scss": "^11.0.0",
+    "stylelint-config-prettier-scss": "^1.0.0"
+  },
+  "peerDependencies": {
+    "sass": "^1.60.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/company/websys-platform.git",
+    "directory": "packages/shared-theme"
+  },
+  "homepage": "https://github.com/company/websys-platform/tree/main/packages/shared-theme",
+  "bugs": {
+    "url": "https://github.com/company/websys-platform/issues"
+  }
+}

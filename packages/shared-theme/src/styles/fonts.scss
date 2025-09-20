@@ -1,0 +1,283 @@
+/**
+ * ユニバーサルデザイン対応フォント設定
+ * UDゴシック優先のフォントファミリー設定
+ */
+
+// Google Fonts からのUDフォント読み込み
+@import url('https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap');
+
+// CSS Variables でのフォント定義
+:root {
+  // ===== フォントファミリー =====
+  // メインフォント（本文・UI要素）
+  --font-family-primary: "BIZ UDPゴシック", "UD デジタル 教科書体",
+                         "游ゴシック", "Yu Gothic", "游ゴシック体",
+                         "Hiragino Sans", "メイリオ", "Meiryo",
+                         "MS Pゴシック", "Helvetica Neue",
+                         "Arial", sans-serif;
+
+  // 見出し用フォント
+  --font-family-heading: "BIZ UDPゴシック", "UD デジタル 教科書体",
+                         "游ゴシック Medium", "Yu Gothic Medium",
+                         "游ゴシック体", "Hiragino Sans",
+                         "メイリオ", "Meiryo", "MS Pゴシック",
+                         "Helvetica Neue", "Arial", sans-serif;
+
+  // 数字・データ表示用
+  --font-family-numeric: "BIZ UDPゴシック", "UD デジタル 教科書体",
+                         "Consolas", "Monaco", "Courier New",
+                         "游ゴシック", "Yu Gothic", monospace;
+
+  // 英文用フォント
+  --font-family-english: "Helvetica Neue", "Arial", "Segoe UI",
+                         "Roboto", "Noto Sans", sans-serif;
+
+  // ===== フォントサイズ =====
+  // 基本サイズ（16px = 1rem）
+  --font-size-base: 16px;
+
+  // サイズスケール（1.25倍スケール - Major Third）
+  --font-size-xs: 0.75rem;    /* 12px - 注釈、ラベル */
+  --font-size-sm: 0.875rem;   /* 14px - 小さなテキスト */
+  --font-size-md: 1rem;       /* 16px - 基本テキスト */
+  --font-size-lg: 1.125rem;   /* 18px - 強調テキスト */
+  --font-size-xl: 1.25rem;    /* 20px - 小見出し */
+  --font-size-2xl: 1.5rem;    /* 24px - 中見出し */
+  --font-size-3xl: 1.875rem;  /* 30px - 大見出し */
+  --font-size-4xl: 2.25rem;   /* 36px - 特大見出し */
+
+  // アクセシビリティ対応サイズ
+  --font-size-accessible-min: 1.125rem; /* 18px - 最小推奨サイズ */
+  --font-size-accessible-preferred: 1.25rem; /* 20px - 推奨サイズ */
+
+  // ===== 行間・字間 =====
+  // 行間（line-height）
+  --line-height-tight: 1.2;     /* 見出し用 */
+  --line-height-normal: 1.5;    /* 本文用（推奨） */
+  --line-height-relaxed: 1.75;  /* 読みやすさ重視 */
+  --line-height-loose: 2;       /* 高齢者・視覚障害者向け */
+
+  // 字間（letter-spacing）
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;  /* 日本語推奨 */
+  --letter-spacing-wider: 0.05em;  /* アクセシビリティ向上 */
+
+  // ===== フォントウェイト =====
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+}
+
+// ===== レスポンシブフォントサイズ =====
+// モバイル
+@media (max-width: 640px) {
+  :root {
+    --font-size-base: 14px; /* モバイルでは基準サイズを小さく */
+    --font-size-accessible-min: 1rem; /* 14px相当 */
+    --font-size-accessible-preferred: 1.125rem; /* 16px相当 */
+  }
+}
+
+// タブレット
+@media (min-width: 641px) and (max-width: 1023px) {
+  :root {
+    --font-size-base: 15px;
+    --font-size-accessible-min: 1.067rem; /* 16px相当 */
+    --font-size-accessible-preferred: 1.2rem; /* 18px相当 */
+  }
+}
+
+// デスクトップ
+@media (min-width: 1024px) {
+  :root {
+    --font-size-base: 16px; /* デスクトップでは標準サイズ */
+  }
+}
+
+// 大画面
+@media (min-width: 1280px) {
+  :root {
+    --font-size-base: 18px; /* 大画面では読みやすいサイズ */
+  }
+}
+
+// ===== ローカルフォントのフォールバック =====
+@font-face {
+  font-family: 'UD Gothic Fallback';
+  src: local('BIZ UDPゴシック Regular'),
+       local('BIZ-UDPGothic-Regular'),
+       local('UD デジタル 教科書体 N-R'),
+       local('UDDigiKyokashoN-R');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'UD Gothic Fallback';
+  src: local('BIZ UDPゴシック Bold'),
+       local('BIZ-UDPGothic-Bold'),
+       local('UD デジタル 教科書体 N-B'),
+       local('UDDigiKyokashoN-B');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+// ===== 基本スタイル適用 =====
+* {
+  font-family: var(--font-family-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+html {
+  font-size: var(--font-size-base);
+}
+
+body {
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-wide);
+  font-weight: var(--font-weight-normal);
+}
+
+// ===== 見出しスタイル =====
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-heading);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  line-height: var(--line-height-tight);
+  margin: 0;
+}
+
+h1 { font-size: var(--font-size-4xl); }
+h2 { font-size: var(--font-size-3xl); }
+h3 { font-size: var(--font-size-2xl); }
+h4 { font-size: var(--font-size-xl); }
+h5 { font-size: var(--font-size-lg); }
+h6 { font-size: var(--font-size-md); }
+
+// ===== 本文スタイル =====
+p {
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-wide);
+  margin: 0 0 1rem 0;
+}
+
+// 小さなテキスト
+small {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+// ===== ユーティリティクラス =====
+
+// フォントサイズ
+.text-xs { font-size: var(--font-size-xs); }
+.text-sm { font-size: var(--font-size-sm); }
+.text-md { font-size: var(--font-size-md); }
+.text-lg { font-size: var(--font-size-lg); }
+.text-xl { font-size: var(--font-size-xl); }
+.text-2xl { font-size: var(--font-size-2xl); }
+.text-3xl { font-size: var(--font-size-3xl); }
+.text-4xl { font-size: var(--font-size-4xl); }
+
+// アクセシビリティ対応サイズ
+.text-accessible {
+  font-size: var(--font-size-accessible-preferred);
+  line-height: var(--line-height-relaxed);
+}
+.text-accessible-min {
+  font-size: var(--font-size-accessible-min);
+  line-height: var(--line-height-normal);
+}
+
+// 行間
+.leading-tight { line-height: var(--line-height-tight); }
+.leading-normal { line-height: var(--line-height-normal); }
+.leading-relaxed { line-height: var(--line-height-relaxed); }
+.leading-loose { line-height: var(--line-height-loose); }
+
+// 字間
+.tracking-tight { letter-spacing: var(--letter-spacing-tight); }
+.tracking-normal { letter-spacing: var(--letter-spacing-normal); }
+.tracking-wide { letter-spacing: var(--letter-spacing-wide); }
+.tracking-wider { letter-spacing: var(--letter-spacing-wider); }
+
+// フォントウェイト
+.font-light { font-weight: var(--font-weight-light); }
+.font-normal { font-weight: var(--font-weight-normal); }
+.font-medium { font-weight: var(--font-weight-medium); }
+.font-semibold { font-weight: var(--font-weight-semibold); }
+.font-bold { font-weight: var(--font-weight-bold); }
+.font-extrabold { font-weight: var(--font-weight-extrabold); }
+
+// 特殊用途クラス
+.text-ja {
+  font-family: var(--font-family-primary);
+  letter-spacing: var(--letter-spacing-wide);
+  line-height: var(--line-height-normal);
+}
+
+.text-numeric {
+  font-family: var(--font-family-numeric);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--letter-spacing-normal);
+}
+
+.text-english {
+  font-family: var(--font-family-english);
+  letter-spacing: var(--letter-spacing-normal);
+}
+
+// ===== ダークモード対応 =====
+@media (prefers-color-scheme: dark) {
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+// ===== 印刷用スタイル =====
+@media print {
+  * {
+    font-family: var(--font-family-primary) !important;
+    color: black !important;
+    background: white !important;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+}
+
+// ===== 高コントラストモード =====
+@media (prefers-contrast: high) {
+  * {
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--letter-spacing-wider);
+  }
+}
+
+// ===== 運動機能に配慮した設定 =====
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

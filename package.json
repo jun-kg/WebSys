@@ -1,0 +1,69 @@
+{
+  "name": "websys-platform",
+  "version": "1.0.0",
+  "description": "企業システム開発プラットフォーム",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "./infrastructure/scripts/setup-dev.sh",
+    "dev": "cd workspace && npm run dev:frontend & npm run dev:backend",
+    "build": "cd workspace && npm run build:frontend && npm run build:backend",
+    "deploy:staging": "./infrastructure/scripts/deploy-staging.sh",
+    "deploy:production": "./infrastructure/scripts/deploy-production.sh",
+
+    "lint": "eslint --ext .vue,.ts,.js workspace/frontend/src workspace/backend/src",
+    "lint:fix": "eslint --ext .vue,.ts,.js workspace/frontend/src workspace/backend/src --fix",
+    "type-check": "cd workspace/frontend && npm run type-check && cd ../backend && npm run type-check",
+
+    "component-check": "node tools/component-checker.js",
+    "component-check:json": "node tools/component-checker.js --json",
+    "component-check:html": "node tools/component-checker.js --html",
+    "component-check:strict": "node tools/component-checker.js --strict",
+
+    "test": "cd workspace && npm run test:frontend && npm run test:backend",
+    "test:coverage": "cd workspace && npm run test:coverage",
+
+    "docs:serve": "cd docs && python -m http.server 8080",
+    "docs:build": "echo 'Documentation is ready in docs/ directory'",
+
+    "clean": "rm -rf workspace/frontend/dist workspace/backend/dist node_modules/.cache",
+    "clean:all": "rm -rf workspace/frontend/node_modules workspace/backend/node_modules workspace/frontend/dist workspace/backend/dist",
+
+    "postinstall": "echo '✅ WebSys プラットフォームのセットアップが完了しました。\\n\\n📖 開始方法:\\n  npm run setup     # 開発環境セットアップ\\n  npm run dev       # 開発サーバー起動\\n\\n📚 ドキュメント:\\n  docs/00-ドキュメント読み順.md から開始してください'"
+  },
+  "workspaces": [
+    "workspace/frontend",
+    "workspace/backend",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vue/eslint-config-prettier": "^8.0.0",
+    "@vue/eslint-config-typescript": "^12.0.0",
+    "eslint": "^8.45.0",
+    "eslint-plugin-vue": "^9.15.0",
+    "glob": "^10.3.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/company/websys-platform.git"
+  },
+  "keywords": [
+    "企業システム",
+    "Vue.js",
+    "Element Plus",
+    "Express",
+    "TypeScript",
+    "Docker",
+    "共通コンポーネント"
+  ],
+  "author": "Company Dev Team",
+  "license": "MIT"
+}
