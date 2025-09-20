@@ -5,12 +5,16 @@
 
 import { PrismaClient } from '@prisma/client'
 import { LogEntry, LogSearchParams, LogSearchResult, LogStatisticsParams, LogStatisticsResult } from '../types/log'
+import { getWebSocketService } from './WebSocketService.js'
+import { AlertRuleEngine } from './AlertRuleEngine.js'
 
 export class LogService {
   private prisma: PrismaClient
+  private alertRuleEngine: AlertRuleEngine
 
   constructor() {
     this.prisma = new PrismaClient()
+    this.alertRuleEngine = new AlertRuleEngine()
   }
 
   /**
@@ -28,7 +32,7 @@ export class LogService {
           continue
         }
 
-        await this.prisma.log.create({
+        const savedLog = await this.prisma.log.create({
           data: {
             timestamp: new Date(log.timestamp),
             level: log.level,
@@ -45,9 +49,39 @@ export class LogService {
             performanceInfo: log.performance,
             tags: log.tags || [],
             environment: log.environment
+          },
+          include: {
+            user: true
           }
         })
         saved++
+
+        // WebSocketでリアルタイム配信
+        const webSocketService = getWebSocketService()
+        if (webSocketService) {
+          webSocketService.broadcastNewLog(savedLog as any)
+
+          // 高レベルエラーの場合はアラートも送信
+          if (log.level >= 50) { // ERROR以上
+            webSocketService.broadcastAlert({
+              level: log.level >= 60 ? 'critical' : 'error',
+              message: `${log.level >= 60 ? '致命的エラー' : 'エラー'}が発生しました: ${log.message}`,
+              logEntry: savedLog as any,
+              details: {
+                category: log.category,
+                source: log.source,
+                hostname: log.hostname
+              }
+            })
+          }
+        }
+
+        // アラートルールエンジンで評価
+        try {
+          await this.alertRuleEngine.evaluateLog(log)
+        } catch (alertError) {
+          console.error('アラートルール評価エラー:', alertError)
+        }
       } catch (error: any) {
         errors.push(`Log save error: ${error.message}`)
       }
