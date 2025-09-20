@@ -19,6 +19,10 @@
           <el-icon><User /></el-icon>
           <span>ユーザー管理</span>
         </el-menu-item>
+        <el-menu-item index="/code-preview-demo">
+          <el-icon><Document /></el-icon>
+          <span>CodePreview デモ</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 

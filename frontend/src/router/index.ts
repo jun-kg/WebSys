@@ -19,6 +19,12 @@ const routes: RouteRecordRaw[] = [
         name: 'Users',
         component: () => import('@/views/Users.vue'),
         meta: { title: 'ユーザー管理' }
+      },
+      {
+        path: 'code-preview-demo',
+        name: 'CodePreviewDemo',
+        component: () => import('@/views/CodePreviewDemo.vue'),
+        meta: { title: 'CodePreview デモ' }
       }
     ]
   },
