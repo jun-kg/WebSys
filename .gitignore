@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 開発用ワークスペース（独立したGitリポジトリ）
 workspace/
 
@@ -12,6 +13,25 @@ environments/
 .env
 .env.*
 !.env.example
+=======
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+>>>>>>> edf5346 (feat: 完全なログ監視システム実装とエラーフィルタリング修正)
 
 # OS files
 .DS_Store
@@ -26,6 +46,7 @@ Thumbs.db
 *.sln
 *.sw?
 
+<<<<<<< HEAD
 # Logs
 logs
 *.log
@@ -33,13 +54,35 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+=======
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Testing
+coverage/
+.nyc_output
+>>>>>>> edf5346 (feat: 完全なログ監視システム実装とエラーフィルタリング修正)
 
 # Temporary files
 *.tmp
 *.temp
 .cache/
 
+<<<<<<< HEAD
 # Runtime files
 *.pid
 *.seed
 *.pid.lock
+=======
+# TypeScript
+*.tsbuildinfo
+frontend/src/auto-imports.d.ts
+frontend/src/components.d.ts
+
+# Prisma
+backend/prisma/*.db
+backend/prisma/*.db-journal
+backend/prisma/migrations/
+>>>>>>> edf5346 (feat: 完全なログ監視システム実装とエラーフィルタリング修正)

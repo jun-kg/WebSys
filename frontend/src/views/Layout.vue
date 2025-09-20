@@ -23,6 +23,14 @@
           <el-icon><Document /></el-icon>
           <span>CodePreview デモ</span>
         </el-menu-item>
+        <!-- <el-menu-item index="/api-test">
+          <el-icon><Document /></el-icon>
+          <span>API接続テスト</span>
+        </el-menu-item> -->
+        <el-menu-item index="/log-monitoring">
+          <el-icon><Monitor /></el-icon>
+          <span>ログ監視システム</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -63,6 +71,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { DataAnalysis, User, Document, ArrowDown, Monitor } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
