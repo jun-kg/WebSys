@@ -4,6 +4,15 @@ import CommonTable from './CommonTable/index.vue'
 import CommonTag from './CommonTag/index.vue'
 import CommonRow from './CommonRow/index.vue'
 import CommonCol from './CommonCol/index.vue'
+import CommonStatistic from './CommonStatistic/index.vue'
+import CommonProgress from './CommonProgress/index.vue'
+import CommonTableColumn from './CommonTableColumn/index.vue'
+import CommonForm from './CommonForm/index.vue'
+import CommonFormItem from './CommonFormItem/index.vue'
+import CommonInput from './CommonInput/index.vue'
+import CommonSelect from './CommonSelect/index.vue'
+import CommonOption from './CommonOption/index.vue'
+import CommonSwitch from './CommonSwitch/index.vue'
 
 export {
   CommonButton,
@@ -11,7 +20,16 @@ export {
   CommonTable,
   CommonTag,
   CommonRow,
-  CommonCol
+  CommonCol,
+  CommonStatistic,
+  CommonProgress,
+  CommonTableColumn,
+  CommonForm,
+  CommonFormItem,
+  CommonInput,
+  CommonSelect,
+  CommonOption,
+  CommonSwitch
 }
 
 export default {
@@ -20,5 +38,14 @@ export default {
   CommonTable,
   CommonTag,
   CommonRow,
-  CommonCol
+  CommonCol,
+  CommonStatistic,
+  CommonProgress,
+  CommonTableColumn,
+  CommonForm,
+  CommonFormItem,
+  CommonInput,
+  CommonSelect,
+  CommonOption,
+  CommonSwitch
 }
