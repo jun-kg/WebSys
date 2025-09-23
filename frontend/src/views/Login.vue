@@ -82,24 +82,16 @@ const handleLogin = async () => {
     loading.value = true
 
     try {
-      // 実際のAPIコール
-      const response = await api.post('/api/auth/login', {
+      const success = await authStore.login({
         username: loginForm.username,
         password: loginForm.password
       })
 
-      const { token, user } = response.data
-
-      // トークンを保存
-      localStorage.setItem('token', token)
-      authStore.setToken(token)
-      authStore.setUser(user)
-
-      showSuccess('S-AUTH-001')
-      router.push('/dashboard')
+      if (success) {
+        router.push('/dashboard')
+      }
     } catch (error: any) {
       console.error('ログインエラー:', error)
-      showApiError(error, 'E-AUTH-001')
     } finally {
       loading.value = false
     }

@@ -44,20 +44,31 @@ class ApiClient {
     try {
       const response = await fetch(url, config)
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }))
-        throw new Error(errorData.message || `HTTP ${response.status}`)
-      }
-
       // レスポンスが空の場合の処理
       const contentType = response.headers.get('content-type')
+      let responseData: any
+
       if (contentType && contentType.includes('application/json')) {
-        return response.json()
+        responseData = await response.json()
       } else {
-        return response.text() as T
+        responseData = await response.text()
       }
-    } catch (error) {
-      console.error(`API request failed: ${method} ${url}`, error)
+
+      // 認証APIの標準レスポンス形式に対応
+      // 成功でも失敗でもレスポンスデータを返し、呼び出し側で判断
+      if (!response.ok) {
+        // サーバーエラーレスポンス
+        const error = new Error(responseData?.error?.message || responseData?.message || `HTTP ${response.status}`) as any
+        error.response = { status: response.status, data: responseData }
+        throw error
+      }
+
+      return responseData as T
+    } catch (error: any) {
+      // ネットワークエラーなどの場合
+      if (!error.response) {
+        console.error(`API request failed: ${method} ${url}`, error)
+      }
       throw error
     }
   }

@@ -12,16 +12,14 @@
       </template>
 
       <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="ユーザー名">
-          <el-input v-model="searchForm.username" placeholder="検索..." clearable />
-        </el-form-item>
-        <el-form-item label="部署">
-          <el-select v-model="searchForm.department" placeholder="選択" clearable>
-            <el-option label="営業部" value="sales" />
-            <el-option label="開発部" value="development" />
-            <el-option label="人事部" value="hr" />
-            <el-option label="経理部" value="accounting" />
-          </el-select>
+        <el-form-item label="検索">
+          <el-input
+            v-model="searchForm.search"
+            placeholder="ユーザー名、メール、氏名、社員番号で検索..."
+            clearable
+            style="width: 300px"
+            @keyup.enter="handleSearch"
+          />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">
@@ -45,9 +43,20 @@
         <el-table-column prop="username" label="ユーザー名" width="150" />
         <el-table-column prop="name" label="氏名" width="150" />
         <el-table-column prop="email" label="メール" width="200" />
-        <el-table-column prop="department" label="部署" width="120">
+        <el-table-column label="会社" width="150">
           <template #default="scope">
-            <el-tag>{{ getDepartmentLabel(scope.row.department) }}</el-tag>
+            <span>{{ scope.row.company?.name || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="部署" width="120">
+          <template #default="scope">
+            <el-tag v-if="scope.row.primaryDepartment">{{ scope.row.primaryDepartment.name }}</el-tag>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="employeeCode" label="社員番号" width="120">
+          <template #default="scope">
+            <span>{{ scope.row.employeeCode || '-' }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="role" label="権限" width="120">
@@ -109,20 +118,52 @@
         <el-form-item label="メール" prop="email">
           <el-input v-model="userForm.email" />
         </el-form-item>
-        <el-form-item label="部署" prop="department">
-          <el-select v-model="userForm.department" style="width: 100%">
-            <el-option label="営業部" value="sales" />
-            <el-option label="開発部" value="development" />
-            <el-option label="人事部" value="hr" />
-            <el-option label="経理部" value="accounting" />
+        <el-form-item label="会社">
+          <el-select v-model="userForm.companyId" placeholder="会社を選択" clearable style="width: 100%">
+            <el-option
+              v-for="company in formData.companies"
+              :key="company.id"
+              :label="company.name"
+              :value="company.id"
+            />
           </el-select>
+        </el-form-item>
+        <el-form-item label="部署">
+          <el-select v-model="userForm.primaryDepartmentId" placeholder="部署を選択" clearable style="width: 100%">
+            <el-option
+              v-for="department in formData.departments.filter(d => !userForm.companyId || d.companyId === userForm.companyId)"
+              :key="department.id"
+              :label="department.name"
+              :value="department.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="社員番号">
+          <el-input v-model="userForm.employeeCode" placeholder="例: EMP001" />
+        </el-form-item>
+        <el-form-item label="入社日">
+          <el-date-picker
+            v-model="userForm.joinDate"
+            type="date"
+            placeholder="入社日を選択"
+            style="width: 100%"
+            value-format="YYYY-MM-DD"
+          />
         </el-form-item>
         <el-form-item label="権限" prop="role">
           <el-select v-model="userForm.role" style="width: 100%">
             <el-option label="管理者" value="ADMIN" />
+            <el-option label="マネージャー" value="MANAGER" />
             <el-option label="一般ユーザー" value="USER" />
             <el-option label="ゲスト" value="GUEST" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="有効状態" v-if="userForm.id">
+          <el-switch
+            v-model="userForm.isActive"
+            active-text="有効"
+            inactive-text="無効"
+          />
         </el-form-item>
         <el-form-item label="パスワード" prop="password" v-if="!userForm.id">
           <el-input v-model="userForm.password" type="password" show-password />
@@ -141,24 +182,23 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox, ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { Plus, Search, Refresh, Edit, Delete } from '@element-plus/icons-vue'
-import { getUsers, createUser, updateUser, deleteUser, type User } from '@/api/users'
-import { showSuccess, showError, showApiError } from '@/utils/messages'
+import { usersApi, type User } from '@/api/users'
+import type { CompanyDepartmentData } from '@/types/user'
 // import { CommonButton, CommonCard, CommonTable, CommonTag, CommonTableColumn, CommonForm, CommonFormItem, CommonInput, CommonSelect, CommonOption, CommonSwitch } from '@company/shared-components'
 
 const loading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(10)
-const total = ref(40)
+const total = ref(0)
 const dialogVisible = ref(false)
 const dialogTitle = computed(() => userForm.id ? 'ユーザー編集' : '新規ユーザー')
 const userFormRef = ref<FormInstance>()
 
 const searchForm = reactive({
-  username: '',
-  department: ''
+  search: ''
 })
 
 const userForm = reactive({
@@ -167,16 +207,23 @@ const userForm = reactive({
   name: '',
   email: '',
   password: '',
-  department: '',
-  role: 'USER'
+  companyId: undefined as number | undefined,
+  primaryDepartmentId: undefined as number | undefined,
+  employeeCode: '',
+  joinDate: '',
+  role: 'USER' as 'ADMIN' | 'MANAGER' | 'USER' | 'GUEST',
+  isActive: true
 })
 
 const userRules = reactive<FormRules>({
   username: [
-    { required: true, message: 'ユーザー名を入力してください', trigger: 'blur' }
+    { required: true, message: 'ユーザー名を入力してください', trigger: 'blur' },
+    { min: 3, max: 50, message: 'ユーザー名は3-50文字で入力してください', trigger: 'blur' },
+    { pattern: /^[a-zA-Z0-9_]+$/, message: 'ユーザー名は英数字とアンダースコアのみ使用できます', trigger: 'blur' }
   ],
   name: [
-    { required: true, message: '氏名を入力してください', trigger: 'blur' }
+    { required: true, message: '氏名を入力してください', trigger: 'blur' },
+    { max: 100, message: '氏名は100文字以内で入力してください', trigger: 'blur' }
   ],
   email: [
     { required: true, message: 'メールアドレスを入力してください', trigger: 'blur' },
@@ -184,14 +231,11 @@ const userRules = reactive<FormRules>({
   ],
   password: [
     {
-      required: (userForm.id === 0),
+      required: computed(() => userForm.id === 0),
       message: 'パスワードを入力してください',
       trigger: 'blur'
     },
-    { min: 6, message: 'パスワードは6文字以上である必要があります', trigger: 'blur' }
-  ],
-  department: [
-    { required: true, message: '部署を選択してください', trigger: 'change' }
+    { min: 6, max: 128, message: 'パスワードは6-128文字で入力してください', trigger: 'blur' }
   ],
   role: [
     { required: true, message: '権限を選択してください', trigger: 'change' }
@@ -199,20 +243,15 @@ const userRules = reactive<FormRules>({
 })
 
 const tableData = ref<User[]>([])
-
-const getDepartmentLabel = (dept: string) => {
-  const map: Record<string, string> = {
-    sales: '営業部',
-    development: '開発部',
-    hr: '人事部',
-    accounting: '経理部'
-  }
-  return map[dept] || dept
-}
+const formData = ref<CompanyDepartmentData['data']>({
+  companies: [],
+  departments: []
+})
 
 const getRoleLabel = (role: string) => {
   const map: Record<string, string> = {
     ADMIN: '管理者',
+    MANAGER: 'マネージャー',
     USER: '一般',
     GUEST: 'ゲスト'
   }
@@ -222,10 +261,23 @@ const getRoleLabel = (role: string) => {
 const getRoleType = (role: string) => {
   const map: Record<string, string> = {
     ADMIN: 'danger',
+    MANAGER: 'warning',
     USER: '',
     GUEST: 'info'
   }
   return map[role] || ''
+}
+
+// フォーム用データの取得
+const fetchFormData = async () => {
+  try {
+    const response = await usersApi.getFormData()
+    if (response.success && response.data) {
+      formData.value = response.data
+    }
+  } catch (error) {
+    console.error('Failed to fetch form data:', error)
+  }
 }
 
 // ユーザー一覧の取得
@@ -233,16 +285,21 @@ const fetchUsers = async () => {
   try {
     loading.value = true
     const params = {
-      username: searchForm.username || undefined,
-      department: searchForm.department || undefined,
       page: currentPage.value,
-      pageSize: pageSize.value
+      pageSize: pageSize.value,
+      search: searchForm.search || undefined
     }
-    const users = await getUsers(params)
-    tableData.value = users
-    total.value = users.length * 4 // 仮の総数設定
+    const response = await usersApi.getUsers(params)
+
+    if (response.success && response.data) {
+      tableData.value = response.data.users
+      total.value = response.data.pagination.total
+    } else {
+      ElMessage.error('ユーザー一覧の取得に失敗しました')
+    }
   } catch (error) {
-    showError('E-DATA-002')
+    console.error('Failed to fetch users:', error)
+    ElMessage.error('ユーザー一覧の取得に失敗しました')
   } finally {
     loading.value = false
   }
@@ -254,8 +311,8 @@ const handleSearch = () => {
 }
 
 const handleReset = () => {
-  searchForm.username = ''
-  searchForm.department = ''
+  searchForm.search = ''
+  currentPage.value = 1
   fetchUsers()
 }
 
@@ -266,36 +323,54 @@ const handleAdd = () => {
     name: '',
     email: '',
     password: '',
-    department: '',
-    role: 'USER'
+    companyId: undefined,
+    primaryDepartmentId: undefined,
+    employeeCode: '',
+    joinDate: '',
+    role: 'USER' as const,
+    isActive: true
   })
   dialogVisible.value = true
 }
 
 const handleEdit = (row: User) => {
   Object.assign(userForm, {
-    ...row,
-    password: '' // パスワードは編集時は空にする
+    id: row.id,
+    username: row.username,
+    name: row.name,
+    email: row.email,
+    password: '', // パスワードは編集時は空にする
+    companyId: row.companyId,
+    primaryDepartmentId: row.primaryDepartmentId,
+    employeeCode: row.employeeCode || '',
+    joinDate: row.joinDate ? row.joinDate.split('T')[0] : '',
+    role: row.role,
+    isActive: row.isActive
   })
   dialogVisible.value = true
 }
 
 const handleDelete = (row: User) => {
   ElMessageBox.confirm(
-    `ユーザー「${row.name}」を削除してもよろしいですか？`,
+    `ユーザー「${row.name}」を無効化してもよろしいですか？`,
     '確認',
     {
-      confirmButtonText: '削除',
+      confirmButtonText: '無効化',
       cancelButtonText: 'キャンセル',
       type: 'warning'
     }
   ).then(async () => {
     try {
-      await deleteUser(row.id)
-      showSuccess('S-USER-003')
-      await fetchUsers()
+      const response = await usersApi.deleteUser(row.id)
+      if (response.success) {
+        ElMessage.success('ユーザーを無効化しました')
+        await fetchUsers()
+      } else {
+        ElMessage.error('ユーザーの無効化に失敗しました')
+      }
     } catch (error) {
-      showError('E-USER-006')
+      console.error('Delete user error:', error)
+      ElMessage.error('ユーザーの無効化に失敗しました')
     }
   }).catch(() => {
     // キャンセル時はメッセージ不要
@@ -312,29 +387,49 @@ const handleSave = async () => {
           username: userForm.username,
           name: userForm.name,
           email: userForm.email,
-          department: userForm.department || null,
+          companyId: userForm.companyId || undefined,
+          primaryDepartmentId: userForm.primaryDepartmentId || undefined,
+          employeeCode: userForm.employeeCode || undefined,
+          joinDate: userForm.joinDate || undefined,
           role: userForm.role,
           ...(userForm.password && { password: userForm.password })
         }
 
         if (userForm.id) {
           // 更新
-          await updateUser(userForm.id, userData)
-          showSuccess('S-USER-002')
+          const response = await usersApi.updateUser(userForm.id, {
+            ...userData,
+            isActive: userForm.isActive
+          })
+          if (response.success) {
+            ElMessage.success('ユーザー情報を更新しました')
+          } else {
+            ElMessage.error(response.error?.message || 'ユーザー更新に失敗しました')
+            return
+          }
         } else {
           // 新規作成
           if (!userForm.password) {
-            showError('E-VALID-001')
+            ElMessage.error('パスワードを入力してください')
             return
           }
-          await createUser({ ...userData, password: userForm.password })
-          showSuccess('S-USER-001')
+          const response = await usersApi.createUser({
+            ...userData,
+            password: userForm.password
+          })
+          if (response.success) {
+            ElMessage.success('ユーザーを作成しました')
+          } else {
+            ElMessage.error(response.error?.message || 'ユーザー作成に失敗しました')
+            return
+          }
         }
 
         dialogVisible.value = false
         await fetchUsers()
-      } catch (error) {
-        showApiError(error, userForm.id ? 'E-USER-005' : 'E-USER-001')
+      } catch (error: any) {
+        console.error('Save user error:', error)
+        ElMessage.error(error.response?.data?.error?.message || 'エラーが発生しました')
       }
     }
   })
@@ -342,12 +437,19 @@ const handleSave = async () => {
 
 const handleStatusChange = async (row: User) => {
   try {
-    await updateUser(row.id, { isActive: row.isActive })
-    showSuccess('S-USER-002')
+    const response = await usersApi.updateUser(row.id, { isActive: row.isActive })
+    if (response.success) {
+      ElMessage.success('ユーザー状態を更新しました')
+    } else {
+      // エラー時は元の状態に戻す
+      row.isActive = !row.isActive
+      ElMessage.error('ユーザー状態の更新に失敗しました')
+    }
   } catch (error) {
     // エラー時は元の状態に戻す
     row.isActive = !row.isActive
-    showError('E-USER-005')
+    console.error('Status change error:', error)
+    ElMessage.error('ユーザー状態の更新に失敗しました')
   }
 }
 
@@ -363,8 +465,11 @@ const handleCurrentChange = (val: number) => {
 }
 
 // 初期化
-onMounted(() => {
-  fetchUsers()
+onMounted(async () => {
+  await Promise.all([
+    fetchFormData(),
+    fetchUsers()
+  ])
 })
 </script>
 

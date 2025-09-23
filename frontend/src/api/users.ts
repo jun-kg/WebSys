@@ -1,69 +1,69 @@
-import api from './index'
+import api from '@/utils/api'
+import type {
+  UsersResponse,
+  UserResponse,
+  CreateUserRequest,
+  UpdateUserRequest,
+  CompanyDepartmentData,
+  UserSearchParams
+} from '@/types/user'
 
-export interface User {
-  id: number
-  username: string
-  name: string
-  email: string
-  department: string | null
-  role: string
-  isActive: boolean
-  createdAt?: string
-  updatedAt?: string
+export const usersApi = {
+  /**
+   * ユーザー一覧取得（ページネーション、検索対応）
+   */
+  async getUsers(params?: UserSearchParams): Promise<UsersResponse> {
+    const queryParams = new URLSearchParams()
+    if (params?.page) queryParams.append('page', params.page.toString())
+    if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString())
+    if (params?.search) queryParams.append('search', params.search)
+
+    const url = queryParams.toString() ? `/users?${queryParams.toString()}` : '/users'
+    return await api.get<UsersResponse>(url)
+  },
+
+  /**
+   * ユーザー詳細取得
+   */
+  async getUser(id: number): Promise<UserResponse> {
+    return await api.get<UserResponse>(`/users/${id}`)
+  },
+
+  /**
+   * ユーザー作成
+   */
+  async createUser(userData: CreateUserRequest): Promise<UserResponse> {
+    return await api.post<UserResponse>('/users', userData)
+  },
+
+  /**
+   * ユーザー更新
+   */
+  async updateUser(id: number, userData: UpdateUserRequest): Promise<UserResponse> {
+    return await api.put<UserResponse>(`/users/${id}`, userData)
+  },
+
+  /**
+   * ユーザー削除（ソフト削除）
+   */
+  async deleteUser(id: number): Promise<{ success: boolean; message: string }> {
+    return await api.delete(`/users/${id}`)
+  },
+
+  /**
+   * フォーム用の会社・部署データ取得
+   */
+  async getFormData(): Promise<CompanyDepartmentData> {
+    return await api.get<CompanyDepartmentData>('/users/form-data/companies-departments')
+  }
 }
 
-export interface CreateUserRequest {
-  username: string
-  name: string
-  email: string
-  password: string
-  department?: string
-  role?: string
-}
+// 後方互換性のために古いAPIも残しておく
+export const getUsers = usersApi.getUsers
+export const getUserById = usersApi.getUser
+export const createUser = usersApi.createUser
+export const updateUser = usersApi.updateUser
+export const deleteUser = usersApi.deleteUser
 
-export interface UpdateUserRequest {
-  username?: string
-  name?: string
-  email?: string
-  password?: string
-  department?: string
-  role?: string
-  isActive?: boolean
-}
-
-export interface UsersSearchParams {
-  username?: string
-  department?: string
-  page?: number
-  pageSize?: number
-}
-
-// ユーザー一覧取得
-export const getUsers = async (params?: UsersSearchParams) => {
-  const response = await api.get('/api/users', { params })
-  return response.data
-}
-
-// ユーザー詳細取得
-export const getUserById = async (id: number) => {
-  const response = await api.get(`/api/users/${id}`)
-  return response.data
-}
-
-// ユーザー作成
-export const createUser = async (userData: CreateUserRequest) => {
-  const response = await api.post('/api/users', userData)
-  return response.data
-}
-
-// ユーザー更新
-export const updateUser = async (id: number, userData: UpdateUserRequest) => {
-  const response = await api.put(`/api/users/${id}`, userData)
-  return response.data
-}
-
-// ユーザー削除
-export const deleteUser = async (id: number) => {
-  const response = await api.delete(`/api/users/${id}`)
-  return response.data
-}
+// 型をエクスポート
+export type { User } from '@/types/user'

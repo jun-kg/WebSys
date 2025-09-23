@@ -15,10 +15,33 @@
           <el-icon><DataAnalysis /></el-icon>
           <span>ダッシュボード</span>
         </el-menu-item>
-        <el-menu-item index="/users">
-          <el-icon><User /></el-icon>
-          <span>ユーザー管理</span>
-        </el-menu-item>
+        <el-sub-menu index="management">
+          <template #title>
+            <el-icon><User /></el-icon>
+            <span>組織管理</span>
+          </template>
+          <el-menu-item index="/users">
+            <span>ユーザー管理</span>
+          </el-menu-item>
+          <el-menu-item index="/companies">
+            <span>会社管理</span>
+          </el-menu-item>
+          <el-menu-item index="/departments">
+            <span>部署管理</span>
+          </el-menu-item>
+        </el-sub-menu>
+        <el-sub-menu index="permission">
+          <template #title>
+            <el-icon><Lock /></el-icon>
+            <span>権限管理</span>
+          </template>
+          <el-menu-item index="/feature-management">
+            <span>機能管理</span>
+          </el-menu-item>
+          <el-menu-item index="/permission-matrix">
+            <span>権限マトリクス</span>
+          </el-menu-item>
+        </el-sub-menu>
         <el-menu-item index="/code-preview-demo">
           <el-icon><Document /></el-icon>
           <span>CodePreview デモ</span>
@@ -79,21 +102,38 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { DataAnalysis, User, Document, ArrowDown, Monitor, Warning, Message } from '@element-plus/icons-vue'
+import { DataAnalysis, User, Document, ArrowDown, Monitor, Warning, Message, Lock } from '@element-plus/icons-vue'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 
 const activeMenu = computed(() => route.path)
 const currentPageTitle = computed(() => route.meta.title || '')
-const username = computed(() => 'Admin User')
+const username = computed(() => authStore.getDisplayName())
 const userAvatar = computed(() => '')
 
-const handleCommand = (command: string) => {
+// ユーザー情報表示用の計算プロパティ
+const userInfo = computed(() => {
+  const user = authStore.user
+  if (!user) return ''
+
+  let info = user.name
+  if (user.company) {
+    info += ` (${user.company.name}`
+    if (user.primaryDepartment) {
+      info += ` / ${user.primaryDepartment.name}`
+    }
+    info += ')'
+  }
+  return info
+})
+
+const handleCommand = async (command: string) => {
   switch (command) {
     case 'logout':
-      localStorage.removeItem('token')
-      ElMessage.success('ログアウトしました')
+      await authStore.logout()
       router.push('/login')
       break
     case 'profile':
