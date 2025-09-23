@@ -5,9 +5,14 @@ import dotenv from 'dotenv'
 import { createServer } from 'http'
 import authRoutes from './routes/auth.js'
 import userRoutes from './routes/users.js'
+import companyRoutes from './routes/companies.js'
+import departmentRoutes from './routes/departments.js'
+import featureRoutes from './routes/features.js'
+import permissionRoutes from './routes/permissions.js'
 import logRoutes from './routes/logs.js'
 import alertRuleRoutes from './routes/alertRules.js'
 import notificationRoutes from './routes/notifications.js'
+import statisticsRoutes from './routes/statistics.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { initializeWebSocketService } from './services/WebSocketService.js'
 
@@ -47,9 +52,14 @@ app.get('/health', (req, res) => {
 
 app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes)
+app.use('/api/companies', companyRoutes)
+app.use('/api/departments', departmentRoutes)
+app.use('/api/features', featureRoutes)
+app.use('/api/permissions', permissionRoutes)
 app.use('/api/logs', logRoutes)
 app.use('/api/alert-rules', alertRuleRoutes)
 app.use('/api/notifications', notificationRoutes)
+app.use('/api/statistics', statisticsRoutes)
 
 // WebSocket接続状況API
 app.get('/api/websocket/status', (req, res) => {

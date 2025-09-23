@@ -7,72 +7,423 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
+// =====================
+// 組織管理系テーブル
+// =====================
+
+model Company {
+  id              Int       @id @default(autoincrement())
+  code            String    @unique @db.VarChar(20)
+  name            String    @db.VarChar(100)
+  nameKana        String?   @db.VarChar(100)
+  industry        String?   @db.VarChar(50)
+  establishedDate DateTime? @db.Date
+  employeeCount   Int?
+  address         String?
+  phone           String?   @db.VarChar(20)
+  email           String?   @db.VarChar(100)
+  contractPlan    String    @default("STANDARD") @db.VarChar(50)
+  maxUsers        Int       @default(100)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdBy       Int?
+  updatedBy       Int?
+
+  // Relations
+  departments     Department[]
+  users          User[]
+  permissionTemplates PermissionTemplate[]
+
+  @@index([code])
+  @@index([isActive])
+  @@map("companies")
+}
+
+model Department {
   id           Int       @id @default(autoincrement())
-  username     String    @unique
-  email        String    @unique
-  password     String
-  name         String
-  department   String?
-  role         UserRole  @default(USER)
+  companyId    Int
+  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code         String    @db.VarChar(20)
+  name         String    @db.VarChar(100)
+  nameKana     String?   @db.VarChar(100)
+  parentId     Int?
+  parent       Department? @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children     Department[] @relation("DepartmentHierarchy")
+  level        Int       @default(1)
+  path         String?
+  displayOrder Int       @default(0)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  createdBy    Int?
+  updatedBy    Int?
+
+  // Relations
+  userDepartments UserDepartment[]
+  departmentFeaturePermissions DepartmentFeaturePermission[]
+  primaryUsers   User[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([parentId])
+  @@index([path])
+  @@index([isActive])
+  @@map("departments")
+}
+
+// =====================
+// ユーザー管理系テーブル
+// =====================
+
+model User {
+  id                    Int       @id @default(autoincrement())
+  username              String    @unique
+  email                 String    @unique
+  password              String
+  name                  String
+  companyId             Int?
+  company               Company?  @relation(fields: [companyId], references: [id])
+  primaryDepartmentId   Int?
+  primaryDepartment     Department? @relation(fields: [primaryDepartmentId], references: [id])
+  employeeCode          String?   @db.VarChar(50)
+  joinDate              DateTime? @db.Date
+  leaveDate             DateTime? @db.Date
+  role                  UserRole  @default(USER)
+  isActive              Boolean   @default(true)
+  lastLoginAt           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  // Relations
+  userDepartments       UserDepartment[]
+  userSessions          UserSession[]
+  logs                  Log[]
+  auditLogs             AuditLog[]
+  systemMessages        SystemMessage[]
+  departmentFeaturePermissionsCreated DepartmentFeaturePermission[] @relation("PermissionCreatedBy")
+  departmentFeaturePermissionsUpdated DepartmentFeaturePermission[] @relation("PermissionUpdatedBy")
+  permissionTemplates   PermissionTemplate[]
+  permissionTemplatesUpdated PermissionTemplate[] @relation("PermissionTemplateUpdatedBy")
+
+  @@index([companyId])
+  @@index([primaryDepartmentId])
+  @@index([role])
+  @@index([employeeCode])
+  @@index([isActive])
+  @@map("users")
+}
+
+model UserDepartment {
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  isPrimary    Boolean   @default(false)
+  role         String    @default("MEMBER") @db.VarChar(50)
+  assignedDate DateTime  @default(now()) @db.Date
+  expiredDate  DateTime? @db.Date
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([userId, departmentId])
+  @@index([userId])
+  @@index([departmentId])
+  @@index([isPrimary])
+  @@map("user_departments")
+}
+
+model UserSession {
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionToken String    @unique
+  ipAddress    String?   @db.VarChar(45)
+  userAgent    String?
+  expiresAt    DateTime
+  lastActivity DateTime  @default(now())
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  // Relations
-  logs         Log[]
+  @@index([userId])
+  @@index([sessionToken])
+  @@index([expiresAt])
+  @@index([isActive])
+  @@map("user_sessions")
 }
 
 enum UserRole {
   ADMIN
+  MANAGER
   USER
   GUEST
+}
+
+// =====================
+// 権限管理系テーブル
+// =====================
+
+model Feature {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  name        String    @db.VarChar(100)
+  description String?
+  category    String    @db.VarChar(50)
+  parentId    Int?
+  parent      Feature?  @relation("FeatureHierarchy", fields: [parentId], references: [id])
+  children    Feature[] @relation("FeatureHierarchy")
+  path        String?
+  urlPattern  String?   @db.VarChar(200)
+  apiPattern  String?   @db.VarChar(200)
+  icon        String?   @db.VarChar(50)
+  displayOrder Int      @default(0)
+  isMenuItem  Boolean   @default(true)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  departmentFeaturePermissions DepartmentFeaturePermission[]
+  permissionTemplateDetails PermissionTemplateDetail[]
+  permissionTemplateFeatures PermissionTemplateFeature[]
+  auditLogs   AuditLog[]
+
+  @@index([code])
+  @@index([category])
+  @@index([parentId])
+  @@index([isActive])
+  @@map("features")
+}
+
+model DepartmentFeaturePermission {
+  id                 Int       @id @default(autoincrement())
+  departmentId       Int
+  department         Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  featureId          Int
+  feature            Feature   @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  canView            Boolean   @default(false)
+  canCreate          Boolean   @default(false)
+  canEdit            Boolean   @default(false)
+  canDelete          Boolean   @default(false)
+  canApprove         Boolean   @default(false)
+  canExport          Boolean   @default(false)
+  inheritFromParent  Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  createdBy          Int?
+  createdByUser      User?     @relation("PermissionCreatedBy", fields: [createdBy], references: [id])
+  updatedBy          Int?
+  updatedByUser      User?     @relation("PermissionUpdatedBy", fields: [updatedBy], references: [id])
+
+  @@unique([departmentId, featureId])
+  @@index([departmentId])
+  @@index([featureId])
+  @@map("department_feature_permissions")
+}
+
+model PermissionTemplate {
+  id               Int       @id @default(autoincrement())
+  name             String    @db.VarChar(100)
+  description      String?
+  departmentType   String?   @db.VarChar(50)
+  companyId        Int?
+  company          Company?  @relation(fields: [companyId], references: [id])
+  isSystemTemplate Boolean   @default(false)
+  category         String    @default("CUSTOM") @db.VarChar(50)
+  isPreset         Boolean   @default(false)
+  isActive         Boolean   @default(true)
+  displayOrder     Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  createdBy        Int?
+  createdByUser    User?     @relation(fields: [createdBy], references: [id])
+  updatedBy        Int?
+  updatedByUser    User?     @relation("PermissionTemplateUpdatedBy", fields: [updatedBy], references: [id])
+
+  // Relations
+  details          PermissionTemplateDetail[]
+  templateFeatures PermissionTemplateFeature[]
+
+  @@map("permission_templates")
+}
+
+model PermissionTemplateDetail {
+  id         Int                @id @default(autoincrement())
+  templateId Int
+  template   PermissionTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  featureId  Int
+  feature    Feature           @relation(fields: [featureId], references: [id])
+  canView    Boolean           @default(false)
+  canCreate  Boolean           @default(false)
+  canEdit    Boolean           @default(false)
+  canDelete  Boolean           @default(false)
+  canApprove Boolean           @default(false)
+  canExport  Boolean           @default(false)
+
+  @@unique([templateId, featureId])
+  @@map("permission_template_details")
+}
+
+model PermissionTemplateFeature {
+  id         Int                @id @default(autoincrement())
+  templateId Int
+  template   PermissionTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  featureId  Int
+  feature    Feature           @relation(fields: [featureId], references: [id])
+  canView    Boolean           @default(false)
+  canCreate  Boolean           @default(false)
+  canEdit    Boolean           @default(false)
+  canDelete  Boolean           @default(false)
+  canApprove Boolean           @default(false)
+  canExport  Boolean           @default(false)
+
+  @@unique([templateId, featureId])
+  @@map("permission_template_features")
+}
+
+// =====================
+// ログ管理系テーブル
+// =====================
+
+model LogCategory {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(20)
+  name        String    @db.VarChar(50)
+  description String?
+  color       String    @default("#666666") @db.VarChar(7)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  logs        Log[]
+
+  @@index([code])
+  @@map("log_categories")
 }
 
 model Log {
   id        BigInt   @id @default(autoincrement())
   timestamp DateTime @default(now())
-  level     Int
-  category  String   @db.VarChar(50)
+  level     LogLevel
+  categoryId Int?
+  category  LogCategory? @relation(fields: [categoryId], references: [id])
+  source    String   @db.VarChar(50)
   message   String
-
-  // 追跡情報
-  traceId   String? @db.VarChar(100)
-  sessionId String? @db.VarChar(100)
   userId    Int?
-  user      User?   @relation(fields: [userId], references: [id])
-
-  // システム情報
-  source   String  @db.VarChar(50)
-  hostname String? @db.VarChar(255)
-  service  String? @db.VarChar(100)
-
-  // 詳細情報
-  details         Json?
-  errorInfo       Json?
-  performanceInfo Json?
-
-  // メタデータ
-  tags        String[]
-  environment String   @db.VarChar(50) @default("development")
-
+  user      User?    @relation(fields: [userId], references: [id])
+  context   Json?
+  environment String @db.VarChar(20) @default("development")
   createdAt DateTime @default(now())
 
   @@index([timestamp(sort: Desc)])
   @@index([level])
-  @@index([category])
+  @@index([categoryId])
   @@index([source])
-  @@index([traceId])
   @@index([userId])
   @@index([environment])
   @@map("logs")
 }
 
+enum LogLevel {
+  TRACE
+  DEBUG
+  INFO
+  WARN
+  ERROR
+  FATAL
+}
+
+// =====================
+// 監査ログテーブル
+// =====================
+
+model AuditLog {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  user            User      @relation(fields: [userId], references: [id])
+  action          String    @db.VarChar(50)
+  targetType      String    @db.VarChar(50)
+  targetId        Int
+  featureId       Int?
+  feature         Feature?  @relation(fields: [featureId], references: [id])
+  oldPermissions  Json?
+  newPermissions  Json?
+  reason          String?
+  ipAddress       String?   @db.VarChar(45)
+  userAgent       String?
+  createdAt       DateTime  @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([targetType, targetId])
+  @@index([createdAt(sort: Desc)])
+  @@index([featureId])
+  @@map("audit_logs")
+}
+
+// =====================
+// メッセージ管理系テーブル
+// =====================
+
+model MessageDefinition {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  category    String    @db.VarChar(30)
+  type        MessageType
+  messageJa   String
+  messageEn   String?
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  systemMessages SystemMessage[]
+
+  @@index([code])
+  @@index([category])
+  @@index([type])
+  @@map("message_definitions")
+}
+
+model SystemMessage {
+  id            Int               @id @default(autoincrement())
+  definitionId  Int
+  definition    MessageDefinition @relation(fields: [definitionId], references: [id])
+  userId        Int?
+  user          User?             @relation(fields: [userId], references: [id])
+  customMessage String?
+  context       Json?
+  isRead        Boolean           @default(false)
+  createdAt     DateTime          @default(now())
+  readAt        DateTime?
+
+  @@index([definitionId])
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt(sort: Desc)])
+  @@map("system_messages")
+}
+
+enum MessageType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+// =====================
+// 統計・アラートテーブル
+// =====================
+
 model LogStatistics {
   id       Int      @id @default(autoincrement())
   date     DateTime @db.Date
   hour     Int?     @db.SmallInt
-  level    Int
+  level    LogLevel
   category String   @db.VarChar(50)
   source   String   @db.VarChar(50)
   count    Int      @default(0)
@@ -88,7 +439,7 @@ model AlertRule {
   description String?
 
   // 条件
-  level          Int?
+  level          LogLevel?
   category       String? @db.VarChar(50)
   source         String? @db.VarChar(50)
   messagePattern String?
