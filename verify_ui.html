@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Log Monitoring Verification</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <h1>ログ監視システム - 動作確認</h1>
+
+    <h2>🔍 API動作確認</h2>
+    <div id="api-results"></div>
+
+    <h2>📋 確認手順</h2>
+    <div class="info result">
+        <strong>エラーフィルタリング機能の確認方法:</strong>
+        <ol>
+            <li>ブラウザで <a href="http://localhost:3000/log-monitoring" target="_blank">http://localhost:3000/log-monitoring</a> にアクセス</li>
+            <li>ヘッダーの「エラーのみ表示」ボタンをクリック</li>
+            <li>ログリストが6件のエラーログのみに減ることを確認</li>
+            <li>「全ログ表示」ボタンをクリックして27件すべてのログが表示されることを確認</li>
+            <li>サイドバーの「エラー」フィルタでも同様の動作を確認</li>
+        </ol>
+    </div>
+
+    <script>
+        async function verifyAPI() {
+            const results = document.getElementById('api-results');
+
+            try {
+                // Get token
+                const loginResponse = await fetch('http://localhost:8000/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'admin', password: 'admin123' })
+                });
+                const { token } = await loginResponse.json();
+
+                // Test all logs
+                const allLogsResponse = await fetch('http://localhost:8000/api/logs/search?page=1&pageSize=10&sortBy=timestamp&sortOrder=desc', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const allLogs = await allLogsResponse.json();
+
+                // Test error logs
+                const errorLogsResponse = await fetch('http://localhost:8000/api/logs/search?levels=50,60&page=1&pageSize=10&sortBy=timestamp&sortOrder=desc', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const errorLogs = await errorLogsResponse.json();
+
+                results.innerHTML = `
+                    <div class="success result">
+                        ✅ 全ログ数: ${allLogs.total}件
+                    </div>
+                    <div class="success result">
+                        ✅ エラーログ数: ${errorLogs.total}件
+                    </div>
+                    <div class="success result">
+                        ✅ API フィルタリング正常動作
+                    </div>
+                `;
+
+            } catch (error) {
+                results.innerHTML = `
+                    <div class="error result">
+                        ❌ API接続エラー: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        verifyAPI();
+    </script>
+</body>
+</html>

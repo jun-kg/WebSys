@@ -46,9 +46,10 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
+import api from '@/api/index'
+import { showSuccess, showApiError } from '@/utils/messages'
 // import { CommonButton, CommonCard } from '@company/shared-components'
 
 const router = useRouter()
@@ -59,7 +60,7 @@ const loading = ref(false)
 
 const loginForm = reactive({
   username: 'admin',
-  password: 'password'
+  password: 'admin123'
 })
 
 const loginRules = reactive<FormRules>({
@@ -81,23 +82,24 @@ const handleLogin = async () => {
     loading.value = true
 
     try {
-      // デモ用: 実際のAPIコールをシミュレート
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      // 仮のトークンを設定
-      const mockToken = 'demo-jwt-token-' + Date.now()
-      localStorage.setItem('token', mockToken)
-      authStore.setToken(mockToken)
-      authStore.setUser({
-        id: 1,
+      // 実際のAPIコール
+      const response = await api.post('/api/auth/login', {
         username: loginForm.username,
-        name: 'Admin User'
+        password: loginForm.password
       })
 
-      ElMessage.success('ログインに成功しました')
+      const { token, user } = response.data
+
+      // トークンを保存
+      localStorage.setItem('token', token)
+      authStore.setToken(token)
+      authStore.setUser(user)
+
+      showSuccess('S-AUTH-001')
       router.push('/dashboard')
-    } catch (error) {
-      ElMessage.error('ログインに失敗しました')
+    } catch (error: any) {
+      console.error('ログインエラー:', error)
+      showApiError(error, 'E-AUTH-001')
     } finally {
       loading.value = false
     }
@@ -117,6 +119,20 @@ const handleLogin = async () => {
 .login-card {
   width: 400px;
   padding: 20px;
+  max-width: 90%;
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    width: 100%;
+    max-width: 350px;
+    padding: 15px;
+  }
+
+  .login-title {
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
 }
 
 .login-title {

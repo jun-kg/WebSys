@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  username     String    @unique
+  email        String    @unique
+  password     String
+  name         String
+  department   String?
+  role         UserRole  @default(USER)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  logs         Log[]
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  GUEST
+}
+
+model Log {
+  id        BigInt   @id @default(autoincrement())
+  timestamp DateTime @default(now())
+  level     Int
+  category  String   @db.VarChar(50)
+  message   String
+
+  // 追跡情報
+  traceId   String? @db.VarChar(100)
+  sessionId String? @db.VarChar(100)
+  userId    Int?
+  user      User?   @relation(fields: [userId], references: [id])
+
+  // システム情報
+  source   String  @db.VarChar(50)
+  hostname String? @db.VarChar(255)
+  service  String? @db.VarChar(100)
+
+  // 詳細情報
+  details         Json?
+  errorInfo       Json?
+  performanceInfo Json?
+
+  // メタデータ
+  tags        String[]
+  environment String   @db.VarChar(50) @default("development")
+
+  createdAt DateTime @default(now())
+
+  @@index([timestamp(sort: Desc)])
+  @@index([level])
+  @@index([category])
+  @@index([source])
+  @@index([traceId])
+  @@index([userId])
+  @@index([environment])
+  @@map("logs")
+}
+
+model LogStatistics {
+  id       Int      @id @default(autoincrement())
+  date     DateTime @db.Date
+  hour     Int?     @db.SmallInt
+  level    Int
+  category String   @db.VarChar(50)
+  source   String   @db.VarChar(50)
+  count    Int      @default(0)
+
+  @@unique([date, hour, level, category, source])
+  @@index([date(sort: Desc)])
+  @@map("log_statistics")
+}
+
+model AlertRule {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  description String?
+
+  // 条件
+  level          Int?
+  category       String? @db.VarChar(50)
+  source         String? @db.VarChar(50)
+  messagePattern String?
+
+  // 閾値
+  thresholdCount  Int @default(1)
+  thresholdPeriod Int @default(300)
+
+  // 通知設定
+  notificationChannels String[]
+
+  isEnabled Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("alert_rules")
+}

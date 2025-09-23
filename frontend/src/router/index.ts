@@ -25,6 +25,30 @@ const routes: RouteRecordRaw[] = [
         name: 'CodePreviewDemo',
         component: () => import('@/views/CodePreviewDemo.vue'),
         meta: { title: 'CodePreview デモ' }
+      },
+      // {
+      //   path: 'api-test',
+      //   name: 'ApiTest',
+      //   component: () => import('@/views/ApiTest.vue'),
+      //   meta: { title: 'API接続テスト' }
+      // },
+      {
+        path: 'log-monitoring',
+        name: 'LogMonitoring',
+        component: () => import('@/views/LogMonitoring.vue'),
+        meta: { title: 'ログ監視システム' }
+      },
+      {
+        path: 'alert-rules',
+        name: 'AlertRules',
+        component: () => import('@/views/AlertRules.vue'),
+        meta: { title: 'アラートルール管理' }
+      },
+      {
+        path: 'notification-settings',
+        name: 'NotificationSettings',
+        component: () => import('@/views/NotificationSettings.vue'),
+        meta: { title: '通知設定' }
       }
     ]
   },

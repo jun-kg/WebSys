@@ -1,22 +1,22 @@
 <template>
   <div class="dashboard">
     <el-row :gutter="20" class="stats-row">
-      <el-col :span="6">
+      <el-col :xs="12" :sm="12" :md="6" :lg="6">
         <el-card shadow="hover">
           <el-statistic title="総ユーザー数" :value="168" />
         </el-card>
       </el-col>
-      <el-col :span="6">
+      <el-col :xs="12" :sm="12" :md="6" :lg="6">
         <el-card shadow="hover">
           <el-statistic title="アクティブユーザー" :value="93" />
         </el-card>
       </el-col>
-      <el-col :span="6">
+      <el-col :xs="12" :sm="12" :md="6" :lg="6">
         <el-card shadow="hover">
           <el-statistic title="今日の訪問数" :value="56" />
         </el-card>
       </el-col>
-      <el-col :span="6">
+      <el-col :xs="12" :sm="12" :md="6" :lg="6">
         <el-card shadow="hover">
           <el-statistic title="処理済みタスク" :value="234" suffix="件" />
         </el-card>
@@ -24,7 +24,7 @@
     </el-row>
 
     <el-row :gutter="20" class="content-row">
-      <el-col :span="16">
+      <el-col :xs="24" :sm="24" :md="16" :lg="16">
         <el-card>
           <template #header>
             <div class="card-header">
@@ -46,7 +46,7 @@
         </el-card>
       </el-col>
 
-      <el-col :span="8">
+      <el-col :xs="24" :sm="24" :md="8" :lg="8">
         <el-card>
           <template #header>
             <div class="card-header">

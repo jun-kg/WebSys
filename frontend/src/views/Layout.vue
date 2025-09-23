@@ -23,6 +23,22 @@
           <el-icon><Document /></el-icon>
           <span>CodePreview デモ</span>
         </el-menu-item>
+        <!-- <el-menu-item index="/api-test">
+          <el-icon><Document /></el-icon>
+          <span>API接続テスト</span>
+        </el-menu-item> -->
+        <el-menu-item index="/log-monitoring">
+          <el-icon><Monitor /></el-icon>
+          <span>ログ監視システム</span>
+        </el-menu-item>
+        <el-menu-item index="/alert-rules">
+          <el-icon><Warning /></el-icon>
+          <span>アラートルール管理</span>
+        </el-menu-item>
+        <el-menu-item index="/notification-settings">
+          <el-icon><Message /></el-icon>
+          <span>通知設定</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -63,6 +79,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { DataAnalysis, User, Document, ArrowDown, Monitor, Warning, Message } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -130,6 +147,39 @@ const handleCommand = (command: string) => {
   align-items: center;
   cursor: pointer;
   gap: 8px;
+}
+
+/* スマホ対応 */
+@media (max-width: 768px) {
+  .layout-aside {
+    width: 100% !important;
+    position: fixed;
+    top: 0;
+    left: -100%;
+    height: 100vh;
+    z-index: 1000;
+    transition: left 0.3s ease;
+  }
+
+  .layout-aside.mobile-open {
+    left: 0;
+  }
+
+  .layout-header {
+    padding: 0 15px;
+  }
+
+  .logo h2 {
+    font-size: 16px;
+  }
+
+  .user-dropdown {
+    gap: 4px;
+  }
+
+  .username {
+    display: none;
+  }
 }
 
 .username {

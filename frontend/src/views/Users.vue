@@ -57,10 +57,10 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状態" width="100">
+        <el-table-column prop="isActive" label="状態" width="100">
           <template #default="scope">
             <el-switch
-              v-model="scope.row.status"
+              v-model="scope.row.isActive"
               active-text="有効"
               inactive-text="無効"
               @change="handleStatusChange(scope.row)"
@@ -119,10 +119,16 @@
         </el-form-item>
         <el-form-item label="権限" prop="role">
           <el-select v-model="userForm.role" style="width: 100%">
-            <el-option label="管理者" value="admin" />
-            <el-option label="一般ユーザー" value="user" />
-            <el-option label="ゲスト" value="guest" />
+            <el-option label="管理者" value="ADMIN" />
+            <el-option label="一般ユーザー" value="USER" />
+            <el-option label="ゲスト" value="GUEST" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="パスワード" prop="password" v-if="!userForm.id">
+          <el-input v-model="userForm.password" type="password" show-password />
+        </el-form-item>
+        <el-form-item label="新しいパスワード" v-if="userForm.id">
+          <el-input v-model="userForm.password" type="password" show-password placeholder="変更する場合のみ入力" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -134,21 +140,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { Plus, Search, Refresh, Edit, Delete } from '@element-plus/icons-vue'
+import { getUsers, createUser, updateUser, deleteUser, type User } from '@/api/users'
+import { showSuccess, showError, showApiError } from '@/utils/messages'
 // import { CommonButton, CommonCard, CommonTable, CommonTag, CommonTableColumn, CommonForm, CommonFormItem, CommonInput, CommonSelect, CommonOption, CommonSwitch } from '@company/shared-components'
-
-interface User {
-  id: number
-  username: string
-  name: string
-  email: string
-  department: string
-  role: string
-  status: boolean
-}
 
 const loading = ref(false)
 const currentPage = ref(1)
@@ -168,8 +166,9 @@ const userForm = reactive({
   username: '',
   name: '',
   email: '',
+  password: '',
   department: '',
-  role: 'user'
+  role: 'USER'
 })
 
 const userRules = reactive<FormRules>({
@@ -183,6 +182,14 @@ const userRules = reactive<FormRules>({
     { required: true, message: 'メールアドレスを入力してください', trigger: 'blur' },
     { type: 'email', message: '正しいメールアドレスを入力してください', trigger: 'blur' }
   ],
+  password: [
+    {
+      required: (userForm.id === 0),
+      message: 'パスワードを入力してください',
+      trigger: 'blur'
+    },
+    { min: 6, message: 'パスワードは6文字以上である必要があります', trigger: 'blur' }
+  ],
   department: [
     { required: true, message: '部署を選択してください', trigger: 'change' }
   ],
@@ -191,44 +198,7 @@ const userRules = reactive<FormRules>({
   ]
 })
 
-const tableData = ref<User[]>([
-  {
-    id: 1,
-    username: 'tanaka',
-    name: '田中太郎',
-    email: 'tanaka@example.com',
-    department: 'development',
-    role: 'admin',
-    status: true
-  },
-  {
-    id: 2,
-    username: 'yamada',
-    name: '山田花子',
-    email: 'yamada@example.com',
-    department: 'sales',
-    role: 'user',
-    status: true
-  },
-  {
-    id: 3,
-    username: 'suzuki',
-    name: '鈴木一郎',
-    email: 'suzuki@example.com',
-    department: 'hr',
-    role: 'user',
-    status: true
-  },
-  {
-    id: 4,
-    username: 'sato',
-    name: '佐藤美咲',
-    email: 'sato@example.com',
-    department: 'accounting',
-    role: 'user',
-    status: false
-  }
-])
+const tableData = ref<User[]>([])
 
 const getDepartmentLabel = (dept: string) => {
   const map: Record<string, string> = {
@@ -242,33 +212,51 @@ const getDepartmentLabel = (dept: string) => {
 
 const getRoleLabel = (role: string) => {
   const map: Record<string, string> = {
-    admin: '管理者',
-    user: '一般',
-    guest: 'ゲスト'
+    ADMIN: '管理者',
+    USER: '一般',
+    GUEST: 'ゲスト'
   }
   return map[role] || role
 }
 
 const getRoleType = (role: string) => {
   const map: Record<string, string> = {
-    admin: 'danger',
-    user: '',
-    guest: 'info'
+    ADMIN: 'danger',
+    USER: '',
+    GUEST: 'info'
   }
   return map[role] || ''
 }
 
-const handleSearch = () => {
-  loading.value = true
-  setTimeout(() => {
-    ElMessage.success('検索完了')
+// ユーザー一覧の取得
+const fetchUsers = async () => {
+  try {
+    loading.value = true
+    const params = {
+      username: searchForm.username || undefined,
+      department: searchForm.department || undefined,
+      page: currentPage.value,
+      pageSize: pageSize.value
+    }
+    const users = await getUsers(params)
+    tableData.value = users
+    total.value = users.length * 4 // 仮の総数設定
+  } catch (error) {
+    showError('E-DATA-002')
+  } finally {
     loading.value = false
-  }, 500)
+  }
+}
+
+const handleSearch = () => {
+  currentPage.value = 1
+  fetchUsers()
 }
 
 const handleReset = () => {
   searchForm.username = ''
   searchForm.department = ''
+  fetchUsers()
 }
 
 const handleAdd = () => {
@@ -277,14 +265,18 @@ const handleAdd = () => {
     username: '',
     name: '',
     email: '',
+    password: '',
     department: '',
-    role: 'user'
+    role: 'USER'
   })
   dialogVisible.value = true
 }
 
 const handleEdit = (row: User) => {
-  Object.assign(userForm, row)
+  Object.assign(userForm, {
+    ...row,
+    password: '' // パスワードは編集時は空にする
+  })
   dialogVisible.value = true
 }
 
@@ -297,35 +289,83 @@ const handleDelete = (row: User) => {
       cancelButtonText: 'キャンセル',
       type: 'warning'
     }
-  ).then(() => {
-    ElMessage.success('削除しました')
+  ).then(async () => {
+    try {
+      await deleteUser(row.id)
+      showSuccess('S-USER-003')
+      await fetchUsers()
+    } catch (error) {
+      showError('E-USER-006')
+    }
   }).catch(() => {
-    ElMessage.info('キャンセルしました')
+    // キャンセル時はメッセージ不要
   })
 }
 
 const handleSave = async () => {
   if (!userFormRef.value) return
 
-  await userFormRef.value.validate((valid) => {
+  await userFormRef.value.validate(async (valid) => {
     if (valid) {
-      ElMessage.success(userForm.id ? '更新しました' : '追加しました')
-      dialogVisible.value = false
+      try {
+        const userData = {
+          username: userForm.username,
+          name: userForm.name,
+          email: userForm.email,
+          department: userForm.department || null,
+          role: userForm.role,
+          ...(userForm.password && { password: userForm.password })
+        }
+
+        if (userForm.id) {
+          // 更新
+          await updateUser(userForm.id, userData)
+          showSuccess('S-USER-002')
+        } else {
+          // 新規作成
+          if (!userForm.password) {
+            showError('E-VALID-001')
+            return
+          }
+          await createUser({ ...userData, password: userForm.password })
+          showSuccess('S-USER-001')
+        }
+
+        dialogVisible.value = false
+        await fetchUsers()
+      } catch (error) {
+        showApiError(error, userForm.id ? 'E-USER-005' : 'E-USER-001')
+      }
     }
   })
 }
 
-const handleStatusChange = (row: User) => {
-  ElMessage.success(`${row.name}の状態を${row.status ? '有効' : '無効'}に変更しました`)
+const handleStatusChange = async (row: User) => {
+  try {
+    await updateUser(row.id, { isActive: row.isActive })
+    showSuccess('S-USER-002')
+  } catch (error) {
+    // エラー時は元の状態に戻す
+    row.isActive = !row.isActive
+    showError('E-USER-005')
+  }
 }
 
 const handleSizeChange = (val: number) => {
-  console.log(`${val} items per page`)
+  pageSize.value = val
+  currentPage.value = 1
+  fetchUsers()
 }
 
 const handleCurrentChange = (val: number) => {
-  console.log(`current page: ${val}`)
+  currentPage.value = val
+  fetchUsers()
 }
+
+// 初期化
+onMounted(() => {
+  fetchUsers()
+})
 </script>
 
 <style scoped>
