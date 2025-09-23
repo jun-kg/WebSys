@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { AuthService } from '../services/AuthService';
@@ -24,7 +24,7 @@ const loginRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
-    const ip = req.ip;
+    const ip = ipKeyGenerator(req);
     const username = req.body.username || 'unknown';
     return `${ip}:${username}`;
   }
