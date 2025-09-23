@@ -32,26 +32,21 @@ export class LogService {
           continue
         }
 
-        const savedLog = await this.prisma.log.create({
+        // レベルを文字列に変換
+        const logLevel = this.convertLevelToEnum(log.level)
+
+        const savedLog = await this.prisma.logs.create({
           data: {
             timestamp: new Date(log.timestamp),
-            level: log.level,
-            category: log.category,
+            level: logLevel,
             message: log.message,
-            traceId: log.traceId,
-            sessionId: log.sessionId,
             userId: log.userId,
             source: log.source,
-            hostname: log.hostname,
-            service: log.service,
-            details: log.details,
-            errorInfo: log.error,
-            performanceInfo: log.performance,
-            tags: log.tags || [],
-            environment: log.environment
+            environment: log.environment || 'development',
+            context: log.details || log.error || log.performance || {}
           },
           include: {
-            user: true
+            users: true
           }
         })
         saved++
@@ -59,18 +54,18 @@ export class LogService {
         // WebSocketでリアルタイム配信
         const webSocketService = getWebSocketService()
         if (webSocketService) {
-          webSocketService.broadcastNewLog(savedLog as any)
+          const formattedLog = this.formatLogEntry(savedLog)
+          webSocketService.broadcastNewLog(formattedLog)
 
           // 高レベルエラーの場合はアラートも送信
           if (log.level >= 50) { // ERROR以上
             webSocketService.broadcastAlert({
               level: log.level >= 60 ? 'critical' : 'error',
               message: `${log.level >= 60 ? '致命的エラー' : 'エラー'}が発生しました: ${log.message}`,
-              logEntry: savedLog as any,
+              logEntry: formattedLog,
               details: {
                 category: log.category,
-                source: log.source,
-                hostname: log.hostname
+                source: log.source
               }
             })
           }
@@ -139,7 +134,7 @@ export class LogService {
     }
 
     // 総件数取得
-    const total = await this.prisma.log.count({ where })
+    const total = await this.prisma.logs.count({ where })
 
     // ページング計算
     const skip = (params.page - 1) * params.pageSize
@@ -150,13 +145,13 @@ export class LogService {
     orderBy[params.sortBy] = params.sortOrder
 
     // ログ取得
-    const logs = await this.prisma.log.findMany({
+    const logs = await this.prisma.logs.findMany({
       where,
       orderBy,
       skip,
       take,
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             username: true,
@@ -220,7 +215,7 @@ export class LogService {
       whereClause.level = { in: params.levels }
     }
 
-    const statistics = await this.prisma.logStatistics.groupBy({
+    const statistics = await this.prisma.log_statistics.groupBy({
       by: [groupByField as any],
       where: whereClause,
       _sum: {
@@ -263,27 +258,27 @@ export class LogService {
 
     // 直近1時間の統計
     const [totalLogs, errorLogs, warningLogs, recentLogs] = await Promise.all([
-      this.prisma.log.count({
+      this.prisma.logs.count({
         where: { timestamp: { gte: oneHourAgo } }
       }),
-      this.prisma.log.count({
+      this.prisma.logs.count({
         where: {
           timestamp: { gte: oneHourAgo },
-          level: { gte: 50 } // ERROR以上
+          level: { in: ['ERROR', 'FATAL'] }
         }
       }),
-      this.prisma.log.count({
+      this.prisma.logs.count({
         where: {
           timestamp: { gte: oneHourAgo },
-          level: 40 // WARN
+          level: 'WARN'
         }
       }),
-      this.prisma.log.findMany({
+      this.prisma.logs.findMany({
         where: { timestamp: { gte: oneHourAgo } },
         orderBy: { timestamp: 'desc' },
         take: 10,
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               username: true,
@@ -306,15 +301,11 @@ export class LogService {
    * ログエントリ検証
    */
   private validateLogEntry(log: LogEntry): boolean {
-    if (!log.timestamp || !log.level || !log.category || !log.message || !log.source) {
+    if (!log.timestamp || !log.level || !log.message || !log.source) {
       return false
     }
 
     if (![60, 50, 40, 30, 20, 10].includes(log.level)) {
-      return false
-    }
-
-    if (!['AUTH', 'API', 'DB', 'SEC', 'SYS', 'USER', 'PERF', 'ERR'].includes(log.category)) {
       return false
     }
 
@@ -326,26 +317,56 @@ export class LogService {
   }
 
   /**
+   * レベル数値をEnum文字列に変換
+   */
+  private convertLevelToEnum(level: number): 'TRACE' | 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL' {
+    switch (level) {
+      case 10: return 'TRACE'
+      case 20: return 'DEBUG'
+      case 30: return 'INFO'
+      case 40: return 'WARN'
+      case 50: return 'ERROR'
+      case 60: return 'FATAL'
+      default: return 'INFO'
+    }
+  }
+
+  /**
+   * レベルEnum文字列を数値に変換
+   */
+  private convertEnumToLevel(level: 'TRACE' | 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL'): number {
+    switch (level) {
+      case 'TRACE': return 10
+      case 'DEBUG': return 20
+      case 'INFO': return 30
+      case 'WARN': return 40
+      case 'ERROR': return 50
+      case 'FATAL': return 60
+      default: return 30
+    }
+  }
+
+  /**
    * ログエントリフォーマット
    */
-  private formatLogEntry(log: any): LogEntry {
+  private formatLogEntry = (log: any): LogEntry => {
     return {
       id: log.id.toString(),
       timestamp: log.timestamp.toISOString(),
-      level: log.level,
-      category: log.category,
+      level: this.convertEnumToLevel(log.level),
+      category: log.category || 'SYS',
       message: log.message,
-      traceId: log.traceId,
-      sessionId: log.sessionId,
+      traceId: undefined,
+      sessionId: undefined,
       userId: log.userId,
-      user: log.user,
+      user: log.users,
       source: log.source,
-      hostname: log.hostname,
-      service: log.service,
-      details: log.details,
-      error: log.errorInfo,
-      performance: log.performanceInfo,
-      tags: log.tags,
+      hostname: undefined,
+      service: undefined,
+      details: log.context,
+      error: undefined,
+      performance: undefined,
+      tags: [],
       environment: log.environment
     }
   }
@@ -402,12 +423,12 @@ export class LogService {
       const [dateStr, hourStr, levelStr, category, source] = key.split('-')
 
       try {
-        await this.prisma.logStatistics.upsert({
+        await this.prisma.log_statistics.upsert({
           where: {
             date_hour_level_category_source: {
               date: new Date(dateStr),
               hour: parseInt(hourStr),
-              level: parseInt(levelStr),
+              level: this.convertLevelToEnum(parseInt(levelStr)),
               category,
               source
             }
@@ -420,7 +441,7 @@ export class LogService {
           create: {
             date: new Date(dateStr),
             hour: parseInt(hourStr),
-            level: parseInt(levelStr),
+            level: this.convertLevelToEnum(parseInt(levelStr)),
             category,
             source,
             count
@@ -450,30 +471,30 @@ export class LogService {
 
     await Promise.all([
       // DEBUG・TRACE削除
-      this.prisma.log.deleteMany({
+      this.prisma.logs.deleteMany({
         where: {
-          level: { lte: 20 },
+          level: { in: ['DEBUG', 'TRACE'] },
           timestamp: { lt: retentionPeriods.debug }
         }
       }),
       // INFO削除
-      this.prisma.log.deleteMany({
+      this.prisma.logs.deleteMany({
         where: {
-          level: 30,
+          level: 'INFO',
           timestamp: { lt: retentionPeriods.info }
         }
       }),
       // WARN削除
-      this.prisma.log.deleteMany({
+      this.prisma.logs.deleteMany({
         where: {
-          level: 40,
+          level: 'WARN',
           timestamp: { lt: retentionPeriods.warn }
         }
       }),
       // ERROR・FATAL削除
-      this.prisma.log.deleteMany({
+      this.prisma.logs.deleteMany({
         where: {
-          level: { gte: 50 },
+          level: { in: ['ERROR', 'FATAL'] },
           timestamp: { lt: retentionPeriods.error }
         }
       })
