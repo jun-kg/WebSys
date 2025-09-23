@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -19,6 +20,30 @@ const routes: RouteRecordRaw[] = [
         name: 'Users',
         component: () => import('@/views/Users.vue'),
         meta: { title: 'ユーザー管理' }
+      },
+      {
+        path: 'companies',
+        name: 'Companies',
+        component: () => import('@/views/Companies.vue'),
+        meta: { title: '会社管理' }
+      },
+      {
+        path: 'departments',
+        name: 'Departments',
+        component: () => import('@/views/Departments.vue'),
+        meta: { title: '部署管理' }
+      },
+      {
+        path: 'feature-management',
+        name: 'FeatureManagement',
+        component: () => import('@/views/FeatureManagement.vue'),
+        meta: { title: '機能管理' }
+      },
+      {
+        path: 'permission-matrix',
+        name: 'PermissionMatrix',
+        component: () => import('@/views/PermissionMatrix.vue'),
+        meta: { title: '権限マトリクス' }
       },
       {
         path: 'code-preview-demo',
@@ -65,13 +90,39 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
+router.beforeEach(async (to, from, next) => {
+  const authStore = useAuthStore()
 
-  if (to.path !== '/login' && !token) {
-    next('/login')
-  } else if (to.path === '/login' && token) {
-    next('/dashboard')
+  // ログインページへのアクセス
+  if (to.path === '/login') {
+    if (authStore.isAuthenticated) {
+      next('/dashboard')
+    } else {
+      next()
+    }
+    return
+  }
+
+  // 認証が必要なページへのアクセス
+  if (!authStore.isAuthenticated) {
+    // トークンがあるかチェック
+    const token = localStorage.getItem('token')
+    if (token) {
+      // トークンがある場合は検証を試行
+      try {
+        await authStore.initializeAuth()
+        if (authStore.isAuthenticated) {
+          next()
+        } else {
+          next('/login')
+        }
+      } catch (error) {
+        console.error('Authentication initialization failed:', error)
+        next('/login')
+      }
+    } else {
+      next('/login')
+    }
   } else {
     next()
   }
