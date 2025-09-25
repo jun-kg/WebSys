@@ -624,17 +624,42 @@
 ## 7. 権限テンプレートAPI
 
 ### 7.1 テンプレート一覧取得
-**GET** `/api/v1/permission-templates`
+**GET** `/api/permissions/templates`
 
 #### リクエストパラメータ
 | パラメータ | 型 | 必須 | 説明 |
 |-----------|-----|------|------|
-| companyId | integer | - | 会社ID |
-| departmentType | string | - | 部署タイプ |
-| isSystemTemplate | boolean | - | システムテンプレートフラグ |
+| companyId | integer | ○ | 会社ID |
+| category | string | - | カテゴリ（CUSTOM/ADMIN/GENERAL/READONLY） |
+| isActive | boolean | - | アクティブフラグ |
+
+#### レスポンス
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "companyId": 1,
+      "name": "営業部標準権限",
+      "description": "営業部向けの標準権限設定",
+      "category": "CUSTOM",
+      "isPreset": false,
+      "isActive": true,
+      "displayOrder": 1,
+      "createdAt": "2024-01-01T00:00:00Z",
+      "updatedAt": "2024-01-01T00:00:00Z",
+      "createdBy": {
+        "id": 1,
+        "name": "管理者"
+      }
+    }
+  ]
+}
+```
 
 ### 7.2 テンプレート詳細取得
-**GET** `/api/v1/permission-templates/{templateId}`
+**GET** `/api/permissions/templates/{templateId}`
 
 #### レスポンス
 ```json
@@ -642,11 +667,13 @@
   "success": true,
   "data": {
     "id": 1,
-    "name": "営業部標準",
-    "description": "営業部用の標準権限セット",
-    "departmentType": "SALES",
     "companyId": 1,
-    "isSystemTemplate": false,
+    "name": "営業部標準権限",
+    "description": "営業部向けの標準権限設定",
+    "category": "CUSTOM",
+    "isPreset": false,
+    "isActive": true,
+    "displayOrder": 1,
     "permissions": [
       {
         "featureId": 1,
@@ -661,7 +688,12 @@
       }
     ],
     "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": "2024-01-01T00:00:00Z",
     "createdBy": {
+      "id": 1,
+      "name": "管理者"
+    },
+    "updatedBy": {
       "id": 1,
       "name": "管理者"
     }
@@ -670,14 +702,16 @@
 ```
 
 ### 7.3 テンプレート作成
-**POST** `/api/v1/permission-templates`
+**POST** `/api/permissions/templates`
 
 #### リクエストボディ
 ```json
 {
+  "companyId": 1,
   "name": "カスタムテンプレート",
   "description": "特定用途のテンプレート",
-  "departmentType": "CUSTOM",
+  "category": "CUSTOM",
+  "displayOrder": 1,
   "permissions": [
     {
       "featureId": 1,
@@ -693,13 +727,49 @@
 ```
 
 ### 7.4 テンプレート更新
-**PUT** `/api/v1/permission-templates/{templateId}`
+**PUT** `/api/permissions/templates/{templateId}`
+
+#### リクエストボディ
+```json
+{
+  "name": "更新されたテンプレート",
+  "description": "更新された説明",
+  "category": "CUSTOM",
+  "isActive": true,
+  "displayOrder": 2,
+  "permissions": [
+    {
+      "featureId": 1,
+      "canView": true,
+      "canCreate": false,
+      "canEdit": true,
+      "canDelete": false,
+      "canApprove": false,
+      "canExport": true
+    }
+  ]
+}
+```
 
 ### 7.5 テンプレート削除
-**DELETE** `/api/v1/permission-templates/{templateId}`
+**DELETE** `/api/permissions/templates/{templateId}`
+
+#### 説明
+論理削除を実行します。システムプリセットテンプレートは削除できません。
+
+#### レスポンス
+```json
+{
+  "success": true,
+  "data": {
+    "message": "テンプレートが削除されました",
+    "deletedAt": "2024-01-20T10:00:00Z"
+  }
+}
+```
 
 ### 7.6 テンプレート適用
-**POST** `/api/v1/permission-templates/{templateId}/apply`
+**POST** `/api/permissions/templates/{templateId}/apply`
 
 #### リクエストボディ
 ```json
@@ -709,14 +779,76 @@
 }
 ```
 
+#### レスポンス
+```json
+{
+  "success": true,
+  "data": {
+    "appliedTo": [
+      {
+        "departmentId": 2,
+        "departmentName": "営業部",
+        "status": "SUCCESS"
+      },
+      {
+        "departmentId": 3,
+        "departmentName": "企画部",
+        "status": "SUCCESS"
+      },
+      {
+        "departmentId": 5,
+        "departmentName": "システム部",
+        "status": "SUCCESS"
+      }
+    ],
+    "appliedAt": "2024-01-20T10:00:00Z"
+  }
+}
+```
+
 ### 7.7 テンプレート複製
-**POST** `/api/v1/permission-templates/{templateId}/duplicate`
+**POST** `/api/permissions/templates/{templateId}/duplicate`
 
 #### リクエストボディ
 ```json
 {
   "name": "複製されたテンプレート",
   "description": "元のテンプレートから複製"
+}
+```
+
+#### レスポンス
+```json
+{
+  "success": true,
+  "data": {
+    "id": 2,
+    "companyId": 1,
+    "name": "複製されたテンプレート",
+    "description": "元のテンプレートから複製",
+    "category": "CUSTOM",
+    "isPreset": false,
+    "isActive": true,
+    "displayOrder": 100,
+    "permissions": [
+      {
+        "featureId": 1,
+        "featureCode": "USER_MGMT",
+        "featureName": "ユーザー管理",
+        "canView": true,
+        "canCreate": false,
+        "canEdit": false,
+        "canDelete": false,
+        "canApprove": false,
+        "canExport": true
+      }
+    ],
+    "createdAt": "2024-01-20T10:00:00Z",
+    "createdBy": {
+      "id": 1,
+      "name": "管理者"
+    }
+  }
 }
 ```
 
