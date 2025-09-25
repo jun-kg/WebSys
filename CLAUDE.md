@@ -2,6 +2,65 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 重要: Prismaクライアント使用ガイドライン
+
+### 必須ルール（違反厳禁）
+
+#### ✅ 正しい使用方法
+```typescript
+// ✅ 必ず統一Prismaシングルトンを使用
+import { prisma } from '../lib/prisma';
+
+// 全てのデータベース操作はこのインスタンスを使用
+const users = await prisma.users.findMany();
+const companies = await prisma.companies.findMany();
+const departments = await prisma.departments.findMany();
+```
+
+#### ❌ 絶対禁止事項
+```typescript
+// ❌ 個別インスタンス作成は絶対禁止
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient(); // これは使用不可
+
+// ❌ クラス内での個別作成も禁止
+export class Service {
+  private prisma = new PrismaClient(); // 絶対禁止
+  constructor() {
+    this.prisma = new PrismaClient(); // これも禁止
+  }
+}
+```
+
+### 必須チェック項目
+
+**新規ファイル作成時:**
+- [ ] `import { prisma } from '../lib/prisma'` を使用
+- [ ] `new PrismaClient()` は絶対に使用しない
+- [ ] テーブル名は複数形を使用（users, companies, departments）
+- [ ] プライベートプロパティでのPrisma保持は禁止
+
+**既存ファイル修正時:**
+- [ ] `new PrismaClient()` を全て削除
+- [ ] `this.prisma` を `prisma` に置換
+- [ ] プライベートプロパティの削除
+- [ ] 正しいインポート文への変更
+
+**重要な理由:**
+- 複数インスタンス作成による接続プール枯渇防止
+- メモリリーク防止とリソース効率化
+- 水平展開での安定動作確保
+- グレースフルシャットダウン対応
+
+### 違反時の典型的エラー
+```
+TypeError: Cannot read properties of undefined (reading 'findMany')
+```
+
+このエラーが発生した場合は、必ず上記ガイドラインに従ってPrismaシングルトンに修正してください。
+
+---
+
 ## プロジェクト概要
 
 Vue.js 3 + Element Plus + Express + PostgreSQLを使用した社内システムの開発環境テンプレートです。
