@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient, User, UserRole } from '@prisma/client';
+import { User, UserRole } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { AuditService } from './AuditService';
 
 interface LoginRequest {
@@ -26,6 +27,7 @@ interface TokenVerificationResult {
   user?: User;
   expiresIn?: number;
   error?: string;
+  errorCode?: string;
 }
 
 interface ValidationResult {
@@ -39,14 +41,12 @@ interface LockStatus {
 }
 
 export class AuthService {
-  private prisma: PrismaClient;
   private auditService: AuditService;
   private saltRounds = 12;
   private tokenSecret = process.env.JWT_SECRET || 'development-secret-key';
   private tokenExpiry = '8h';
 
   constructor() {
-    this.prisma = new PrismaClient();
     this.auditService = new AuditService();
   }
 
@@ -154,46 +154,143 @@ export class AuthService {
 
   async verifyToken(token: string): Promise<TokenVerificationResult> {
     try {
+      // トークン形式の事前チェック
+      if (!token || typeof token !== 'string') {
+        return {
+          isValid: false,
+          error: 'トークンが提供されていません',
+          errorCode: 'TOKEN_MISSING'
+        };
+      }
+
+      if (token.length < 10 || token.length > 2000) {
+        return {
+          isValid: false,
+          error: 'トークンの形式が無効です (長さ不正)',
+          errorCode: 'TOKEN_MALFORMED'
+        };
+      }
+
       // JWT検証
-      const decoded = jwt.verify(token, this.tokenSecret) as any;
+      let decoded: any;
+      try {
+        decoded = jwt.verify(token, this.tokenSecret) as any;
+      } catch (jwtError) {
+        if (jwtError instanceof jwt.TokenExpiredError) {
+          const expiredAt = new Date(jwtError.expiredAt).toLocaleString('ja-JP');
+          return {
+            isValid: false,
+            error: `トークンが期限切れです (期限: ${expiredAt})`,
+            errorCode: 'TOKEN_EXPIRED'
+          };
+        } else if (jwtError instanceof jwt.JsonWebTokenError) {
+          const errorDetail = jwtError.message.includes('invalid signature') ?
+            '署名が無効' :
+            jwtError.message.includes('malformed') ?
+              '形式が不正' :
+              jwtError.message.includes('invalid token') ?
+                'トークンが不正' :
+                'JWT解析エラー';
+          return {
+            isValid: false,
+            error: `トークンが無効です (${errorDetail})`,
+            errorCode: 'TOKEN_INVALID'
+          };
+        }
+
+        // その他のJWTエラー
+        console.error('JWT verification unexpected error:', jwtError);
+        return {
+          isValid: false,
+          error: `トークン検証中にエラーが発生しました: ${jwtError.message}`,
+          errorCode: 'TOKEN_VERIFICATION_ERROR'
+        };
+      }
+
+      // ペイロード検証
+      if (!decoded.userId || !decoded.username) {
+        return {
+          isValid: false,
+          error: 'トークンのペイロードが不完全です (ユーザー情報不足)',
+          errorCode: 'TOKEN_PAYLOAD_INVALID'
+        };
+      }
 
       // セッション存在確認
       const session = await this.findSessionByToken(token);
-      if (!session || !session.isActive) {
-        return { isValid: false, error: 'セッションが無効です' };
+      if (!session) {
+        return {
+          isValid: false,
+          error: 'セッションが見つかりません (トークンが無効または削除済み)',
+          errorCode: 'SESSION_NOT_FOUND'
+        };
+      }
+
+      if (!session.isActive) {
+        return {
+          isValid: false,
+          error: 'セッションが無効化されています (ログアウト済みまたは強制終了)',
+          errorCode: 'SESSION_INACTIVE'
+        };
       }
 
       // セッション期限確認
-      if (session.expiresAt < new Date()) {
+      const now = new Date();
+      if (session.expiresAt < now) {
         await this.invalidateSession(token);
-        return { isValid: false, error: 'セッションが期限切れです' };
+        const expiredAgo = Math.floor((now.getTime() - session.expiresAt.getTime()) / (1000 * 60));
+        return {
+          isValid: false,
+          error: `セッションが期限切れです (${expiredAgo}分前に期限切れ)`,
+          errorCode: 'SESSION_EXPIRED'
+        };
       }
 
       // ユーザー存在・アクティブ確認
       const user = await this.findUserById(decoded.userId);
-      if (!user || !user.isActive) {
+      if (!user) {
         await this.invalidateSession(token);
-        return { isValid: false, error: 'ユーザーが無効です' };
+        return {
+          isValid: false,
+          error: `ユーザーが見つかりません (ユーザーID: ${decoded.userId})`,
+          errorCode: 'USER_NOT_FOUND'
+        };
+      }
+
+      if (!user.isActive) {
+        await this.invalidateSession(token);
+        return {
+          isValid: false,
+          error: `ユーザーアカウントが無効になっています (ユーザー: ${user.username})`,
+          errorCode: 'USER_INACTIVE'
+        };
       }
 
       // 最終アクティビティ更新
       await this.updateSessionActivity(session.id);
 
+      const expiresInSeconds = Math.floor((session.expiresAt.getTime() - Date.now()) / 1000);
+
       return {
         isValid: true,
         user: this.sanitizeUser(user),
-        expiresIn: Math.floor((session.expiresAt.getTime() - Date.now()) / 1000)
+        expiresIn: expiresInSeconds
       };
 
     } catch (error) {
-      if (error instanceof jwt.TokenExpiredError) {
-        return { isValid: false, error: 'トークンが期限切れです' };
-      } else if (error instanceof jwt.JsonWebTokenError) {
-        return { isValid: false, error: 'トークンが無効です' };
-      }
+      // 予期しないシステムエラー
+      console.error('Token verification system error:', {
+        error: error.message,
+        stack: error.stack,
+        tokenLength: token?.length,
+        timestamp: new Date().toISOString()
+      });
 
-      console.error('Token verification error:', error);
-      return { isValid: false, error: 'トークン検証エラー' };
+      return {
+        isValid: false,
+        error: `システムエラーが発生しました: ${error.message}`,
+        errorCode: 'SYSTEM_ERROR'
+      };
     }
   }
 
@@ -214,22 +311,14 @@ export class AuthService {
   }
 
   private async findUserByUsername(username: string): Promise<User | null> {
-    return this.prisma.user.findUnique({
-      where: { username },
-      include: {
-        company: true,
-        primaryDepartment: true
-      }
+    return prisma.users.findUnique({
+      where: { username }
     });
   }
 
   private async findUserById(id: number): Promise<User | null> {
-    return this.prisma.user.findUnique({
-      where: { id },
-      include: {
-        company: true,
-        primaryDepartment: true
-      }
+    return prisma.users.findUnique({
+      where: { id }
     });
   }
 
@@ -256,7 +345,7 @@ export class AuthService {
   }
 
   private async getActiveSessionCount(userId: number): Promise<number> {
-    return this.prisma.userSession.count({
+    return prisma.user_sessions.count({
       where: {
         userId,
         isActive: true,
@@ -278,7 +367,7 @@ export class AuthService {
   }
 
   private async cleanupOldestSession(userId: number): Promise<void> {
-    const oldestSession = await this.prisma.userSession.findFirst({
+    const oldestSession = await prisma.user_sessions.findFirst({
       where: {
         userId,
         isActive: true
@@ -289,7 +378,7 @@ export class AuthService {
     });
 
     if (oldestSession) {
-      await this.prisma.userSession.update({
+      await prisma.user_sessions.update({
         where: { id: oldestSession.id },
         data: { isActive: false }
       });
@@ -303,7 +392,7 @@ export class AuthService {
   ): Promise<void> {
     const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000); // 8時間後
 
-    await this.prisma.userSession.create({
+    await prisma.user_sessions.create({
       data: {
         userId,
         sessionToken: token,
@@ -311,26 +400,27 @@ export class AuthService {
         userAgent: clientInfo.userAgent,
         expiresAt,
         lastActivity: new Date(),
-        isActive: true
+        isActive: true,
+        updatedAt: new Date()
       }
     });
   }
 
   private async findSessionByToken(token: string) {
-    return this.prisma.userSession.findUnique({
+    return prisma.user_sessions.findUnique({
       where: { sessionToken: token }
     });
   }
 
   private async invalidateSession(token: string): Promise<void> {
-    await this.prisma.userSession.updateMany({
+    await prisma.user_sessions.updateMany({
       where: { sessionToken: token },
       data: { isActive: false }
     });
   }
 
   private async updateSessionActivity(sessionId: number): Promise<void> {
-    await this.prisma.userSession.update({
+    await prisma.user_sessions.update({
       where: { id: sessionId },
       data: { lastActivity: new Date() }
     });
@@ -363,7 +453,7 @@ export class AuthService {
   }
 
   private async updateLastLogin(userId: number): Promise<void> {
-    await this.prisma.user.update({
+    await prisma.users.update({
       where: { id: userId },
       data: { lastLoginAt: new Date() }
     });

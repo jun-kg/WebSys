@@ -1,149 +1,137 @@
 <template>
   <div class="feature-management">
     <!-- ページヘッダー -->
-    <CommonCard variant="bordered" class="page-header" responsive>
-      <CommonRow align="middle" justify="space-between">
-        <CommonCol :span="16">
+    <el-card class="page-header">
+      <el-row align="middle" justify="space-between">
+        <el-col :span="16">
           <h1 class="page-title">機能管理</h1>
           <p class="page-description">
             システム機能の登録・編集・削除と権限設定
           </p>
-        </CommonCol>
-        <CommonCol :span="8" class="text-right">
-          <CommonButton
-            variant="primary"
+        </el-col>
+        <el-col :span="8" class="text-right">
+          <el-button
+            type="primary"
             @click="showCreateDialog = true"
-            responsive
-            touch-optimized
           >
-            <template #prefix>
-              <Icon name="plus" />
+            <template #icon>
+              <Plus />
             </template>
             新規機能追加
-          </CommonButton>
-        </CommonCol>
-      </CommonRow>
-    </CommonCard>
+          </el-button>
+        </el-col>
+      </el-row>
+    </el-card>
 
     <!-- 検索・フィルター -->
-    <CommonCard variant="default" class="filter-section" responsive>
-      <CommonForm
+    <el-card class="filter-section">
+      <el-form
         :model="searchForm"
-        variant="inline"
+        inline
         class="search-form"
-        responsive
       >
-        <CommonFormItem label="機能名">
-          <CommonInput
+        <el-form-item label="機能名">
+          <el-input
             v-model="searchForm.name"
-            variant="search"
             placeholder="機能名で検索..."
-            :clearable="true"
+            clearable
             @clear="handleSearch"
             @keyup.enter="handleSearch"
-            responsive
           />
-        </CommonFormItem>
-        <CommonFormItem label="カテゴリ">
-          <CommonSelect
+        </el-form-item>
+        <el-form-item label="カテゴリ">
+          <el-select
             v-model="searchForm.category"
-            variant="searchable"
             placeholder="カテゴリを選択"
-            :clearable="true"
-            responsive
+            clearable
           >
-            <CommonOption
+            <el-option
               v-for="category in categories"
               :key="category.code"
               :label="category.name"
               :value="category.code"
             />
-          </CommonSelect>
-        </CommonFormItem>
-        <CommonFormItem label="状態">
-          <CommonSelect
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状態">
+          <el-select
             v-model="searchForm.isActive"
             placeholder="状態を選択"
-            :clearable="true"
-            responsive
+            clearable
           >
-            <CommonOption label="有効" :value="true" />
-            <CommonOption label="無効" :value="false" />
-          </CommonSelect>
-        </CommonFormItem>
-        <CommonFormItem>
-          <CommonButton
-            variant="primary"
+            <el-option label="有効" :value="true" />
+            <el-option label="無効" :value="false" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button
+            type="primary"
             @click="handleSearch"
-            responsive
           >
             検索
-          </CommonButton>
-          <CommonButton
-            variant="default"
+          </el-button>
+          <el-button
             @click="handleReset"
-            responsive
           >
             リセット
-          </CommonButton>
-        </CommonFormItem>
-      </CommonForm>
-    </CommonCard>
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
 
     <!-- 機能一覧テーブル -->
-    <CommonCard variant="default" responsive>
-      <CommonTable
+    <el-card>
+      <el-table
         :data="features"
-        :loading="loading"
-        variant="striped"
-        responsive
+        v-loading="loading"
+        stripe
         @row-click="handleRowClick"
       >
-        <CommonTableColumn prop="code" label="機能コード" width="120" sortable />
-        <CommonTableColumn prop="name" label="機能名" width="200" />
-        <CommonTableColumn prop="category" label="カテゴリ" width="120">
+        <el-table-column prop="code" label="機能コード" width="120" sortable />
+        <el-table-column prop="name" label="機能名" width="200" />
+        <el-table-column prop="category" label="カテゴリ" width="120">
           <template #default="{ row }">
-            <CommonTag :type="getCategoryType(row.category)">
+            <el-tag :type="getCategoryType(row.category)">
               {{ getCategoryName(row.category) }}
-            </CommonTag>
+            </el-tag>
           </template>
-        </CommonTableColumn>
-        <CommonTableColumn prop="description" label="説明" min-width="200" />
-        <CommonTableColumn prop="displayOrder" label="表示順" width="80" />
-        <CommonTableColumn prop="isMenuItem" label="メニュー表示" width="100" align="center">
+        </el-table-column>
+        <el-table-column prop="description" label="説明" min-width="200" />
+        <el-table-column prop="displayOrder" label="表示順" width="80" />
+        <el-table-column prop="isMenuItem" label="メニュー表示" width="100" align="center">
           <template #default="{ row }">
-            <CommonTag :type="row.isMenuItem ? 'success' : 'info'">
+            <el-tag :type="row.isMenuItem ? 'success' : 'info'">
               {{ row.isMenuItem ? '表示' : '非表示' }}
-            </CommonTag>
+            </el-tag>
           </template>
-        </CommonTableColumn>
-        <CommonTableColumn prop="isActive" label="状態" width="80" align="center">
+        </el-table-column>
+        <el-table-column prop="isActive" label="状態" width="80" align="center">
           <template #default="{ row }">
-            <CommonTag :type="row.isActive ? 'success' : 'danger'">
+            <el-tag :type="row.isActive ? 'success' : 'danger'">
               {{ row.isActive ? '有効' : '無効' }}
-            </CommonTag>
+            </el-tag>
           </template>
-        </CommonTableColumn>
-        <CommonTableColumn label="操作" fixed="right" width="150">
+        </el-table-column>
+        <el-table-column label="操作" fixed="right" width="150">
           <template #default="{ row }">
-            <CommonButton
-              variant="ghost"
+            <el-button
+              text
               size="small"
               @click.stop="handleEdit(row)"
             >
               編集
-            </CommonButton>
-            <CommonButton
-              variant="ghost"
+            </el-button>
+            <el-button
+              text
               size="small"
               type="danger"
               @click.stop="handleDelete(row)"
             >
               削除
-            </CommonButton>
+            </el-button>
           </template>
-        </CommonTableColumn>
-      </CommonTable>
+        </el-table-column>
+      </el-table>
 
       <!-- ページネーション -->
       <div class="pagination-wrapper">
@@ -157,7 +145,7 @@
           @size-change="handleSizeChange"
         />
       </div>
-    </CommonCard>
+    </el-card>
 
     <!-- 機能作成/編集ダイアログ -->
     <el-dialog
@@ -166,126 +154,113 @@
       width="600px"
       :before-close="handleDialogClose"
     >
-      <CommonForm
+      <el-form
         ref="featureFormRef"
         :model="featureForm"
         :rules="featureRules"
-        variant="default"
-        responsive
+        label-width="120px"
       >
-        <CommonFormItem label="機能コード" prop="code">
-          <CommonInput
+        <el-form-item label="機能コード" prop="code">
+          <el-input
             v-model="featureForm.code"
             :disabled="!!editingFeature"
             placeholder="機能コード（英数字）"
-            responsive
           />
-        </CommonFormItem>
-        <CommonFormItem label="機能名" prop="name">
-          <CommonInput
+        </el-form-item>
+        <el-form-item label="機能名" prop="name">
+          <el-input
             v-model="featureForm.name"
             placeholder="機能名"
-            responsive
           />
-        </CommonFormItem>
-        <CommonFormItem label="説明">
-          <CommonInput
+        </el-form-item>
+        <el-form-item label="説明">
+          <el-input
             v-model="featureForm.description"
             type="textarea"
             placeholder="機能の説明"
             :rows="3"
-            responsive
           />
-        </CommonFormItem>
-        <CommonFormItem label="カテゴリ" prop="category">
-          <CommonSelect
+        </el-form-item>
+        <el-form-item label="カテゴリ" prop="category">
+          <el-select
             v-model="featureForm.category"
             placeholder="カテゴリを選択"
-            responsive
           >
-            <CommonOption
+            <el-option
               v-for="category in categories"
               :key="category.code"
               :label="category.name"
               :value="category.code"
             />
-          </CommonSelect>
-        </CommonFormItem>
-        <CommonFormItem label="親機能">
-          <CommonSelect
+          </el-select>
+        </el-form-item>
+        <el-form-item label="親機能">
+          <el-select
             v-model="featureForm.parentId"
             placeholder="親機能を選択（なしの場合は空白）"
-            :clearable="true"
-            responsive
+            clearable
           >
-            <CommonOption
+            <el-option
               v-for="feature in parentFeatureOptions"
               :key="feature.id"
               :label="feature.name"
               :value="feature.id"
             />
-          </CommonSelect>
-        </CommonFormItem>
-        <CommonFormItem label="URLパターン">
-          <CommonInput
+          </el-select>
+        </el-form-item>
+        <el-form-item label="URLパターン">
+          <el-input
             v-model="featureForm.urlPattern"
             placeholder="/features/*"
-            responsive
           />
-        </CommonFormItem>
-        <CommonFormItem label="APIパターン">
-          <CommonInput
+        </el-form-item>
+        <el-form-item label="APIパターン">
+          <el-input
             v-model="featureForm.apiPattern"
             placeholder="/api/features/*"
-            responsive
           />
-        </CommonFormItem>
-        <CommonFormItem label="アイコン">
-          <CommonInput
+        </el-form-item>
+        <el-form-item label="アイコン">
+          <el-input
             v-model="featureForm.icon"
             placeholder="el-icon-setting"
-            responsive
           />
-        </CommonFormItem>
-        <CommonRow>
-          <CommonCol :span="12">
-            <CommonFormItem label="表示順">
-              <CommonInput
+        </el-form-item>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="表示順">
+              <el-input
                 v-model.number="featureForm.displayOrder"
                 type="number"
                 placeholder="0"
-                responsive
               />
-            </CommonFormItem>
-          </CommonCol>
-          <CommonCol :span="12">
-            <CommonFormItem label="メニュー表示">
-              <CommonSwitch
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="メニュー表示">
+              <el-switch
                 v-model="featureForm.isMenuItem"
                 active-text="表示"
                 inactive-text="非表示"
               />
-            </CommonFormItem>
-          </CommonCol>
-        </CommonRow>
-      </CommonForm>
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </el-form>
 
       <template #footer>
-        <CommonButton
-          variant="default"
+        <el-button
           @click="handleDialogClose"
-          responsive
         >
           キャンセル
-        </CommonButton>
-        <CommonButton
-          variant="primary"
+        </el-button>
+        <el-button
+          type="primary"
           :loading="saving"
           @click="handleSave"
-          responsive
         >
           {{ editingFeature ? '更新' : '作成' }}
-        </CommonButton>
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -294,21 +269,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, ElDialog, ElPagination } from 'element-plus'
-import {
-  CommonCard,
-  CommonRow,
-  CommonCol,
-  CommonForm,
-  CommonFormItem,
-  CommonInput,
-  CommonSelect,
-  CommonOption,
-  CommonButton,
-  CommonTable,
-  CommonTableColumn,
-  CommonTag,
-  CommonSwitch
-} from '@company/shared-components'
+import { Plus } from '@element-plus/icons-vue'
+// Element Plus components are auto-imported
 import { featureAPI } from '@/api/features'
 
 // リアクティブデータ
@@ -318,7 +280,6 @@ const showCreateDialog = ref(false)
 const editingFeature = ref(null)
 const features = ref([])
 const categories = ref([])
-const parentFeatureOptions = ref([])
 
 // 検索フォーム
 const searchForm = reactive({

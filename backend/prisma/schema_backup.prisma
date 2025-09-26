@@ -16,7 +16,7 @@ model alert_rules {
   messagePattern       String?
   thresholdCount       Int       @default(1)
   thresholdPeriod      Int       @default(300)
-  notificationChannels String[]
+  notificationChannels String
   isEnabled            Boolean   @default(true)
   createdAt            DateTime  @default(now())
   updatedAt            DateTime

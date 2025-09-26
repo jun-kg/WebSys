@@ -1,10 +1,9 @@
 import { Router } from 'express'
 import { body, validationResult } from 'express-validator'
-import { PrismaClient } from '@prisma/client'
 import { authMiddleware, requireAdmin } from '../middleware/auth'
+import { prisma } from '../lib/prisma'
 
 const router = Router()
-const prisma = new PrismaClient()
 
 // Get all companies with pagination (protected)
 router.get('/', authMiddleware, async (req, res) => {
@@ -30,7 +29,7 @@ router.get('/', authMiddleware, async (req, res) => {
     } : { isActive: true }
 
     const [companies, total] = await Promise.all([
-      prisma.company.findMany({
+      prisma.companies.findMany({
         where: whereClause,
         select: {
           id: true,
@@ -59,7 +58,7 @@ router.get('/', authMiddleware, async (req, res) => {
         skip,
         take: pageSize
       }),
-      prisma.company.count({ where: whereClause })
+      prisma.companies.count({ where: whereClause })
     ])
 
     res.json({
@@ -91,7 +90,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params
 
   try {
-    const company = await prisma.company.findUnique({
+    const company = await prisma.companies.findUnique({
       where: { id: parseInt(id) },
       select: {
         id: true,
@@ -209,7 +208,7 @@ router.post(
 
     try {
       // Check if company code already exists
-      const existingCompany = await prisma.company.findFirst({
+      const existingCompany = await prisma.companies.findFirst({
         where: { code }
       })
 
@@ -224,7 +223,7 @@ router.post(
       }
 
       // Create company
-      const company = await prisma.company.create({
+      const company = await prisma.companies.create({
         data: {
           code,
           name,
@@ -316,7 +315,7 @@ router.put(
 
     try {
       // Check if company exists
-      const existingCompany = await prisma.company.findUnique({
+      const existingCompany = await prisma.companies.findUnique({
         where: { id: parseInt(id) }
       })
 
@@ -332,7 +331,7 @@ router.put(
 
       // Check for duplicate code if updating
       if (code) {
-        const duplicateCompany = await prisma.company.findFirst({
+        const duplicateCompany = await prisma.companies.findFirst({
           where: {
             AND: [
               { id: { not: parseInt(id) } },
@@ -362,7 +361,7 @@ router.put(
       if (isActive !== undefined) updateData.isActive = isActive
 
       // Update company
-      const company = await prisma.company.update({
+      const company = await prisma.companies.update({
         where: { id: parseInt(id) },
         data: updateData,
         select: {
@@ -401,7 +400,7 @@ router.delete('/:id', authMiddleware, requireAdmin, async (req, res) => {
 
   try {
     // Check if company exists
-    const existingCompany = await prisma.company.findUnique({
+    const existingCompany = await prisma.companies.findUnique({
       where: { id: parseInt(id) },
       include: {
         users: { where: { isActive: true } },
@@ -431,7 +430,7 @@ router.delete('/:id', authMiddleware, requireAdmin, async (req, res) => {
     }
 
     // Soft delete by setting isActive to false
-    await prisma.company.update({
+    await prisma.companies.update({
       where: { id: parseInt(id) },
       data: { isActive: false }
     })

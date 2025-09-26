@@ -3,26 +3,25 @@
  * ログに対するアラートルールの評価とアラート生成を担当
  */
 
-import { PrismaClient } from '@prisma/client'
 import { LogEntry } from '../types/log'
 import { getWebSocketService } from './WebSocketService.js'
 import { getNotificationService } from './NotificationService.js'
 import type { NotificationMessage } from './NotificationService.js'
+import { prisma } from '../lib/prisma'
 
 export class AlertRuleEngine {
-  private prisma: PrismaClient
-
   constructor() {
-    this.prisma = new PrismaClient()
+    // Prismaシングルトンを使用
   }
 
   /**
    * ログに対してアラートルールを評価
    */
   async evaluateLog(log: LogEntry): Promise<void> {
+    console.log('[AlertEngine] ログ評価開始', { message: log.message, level: log.level });
     try {
       // 有効なアラートルールを取得
-      const activeRules = await this.prisma.alertRule.findMany({
+      const activeRules = await prisma.alert_rules.findMany({
         where: { isEnabled: true }
       })
 
@@ -73,7 +72,7 @@ export class AlertRuleEngine {
         where.message = { contains: rule.messagePattern, mode: 'insensitive' }
       }
 
-      const matchCount = await this.prisma.log.count({ where })
+      const matchCount = await prisma.logs.count({ where })
 
       return matchCount >= rule.thresholdCount
     } catch (error) {
@@ -198,7 +197,7 @@ export class AlertRuleEngine {
     sampleLogs: LogEntry[]
   }> {
     try {
-      const rule = await this.prisma.alertRule.findUnique({
+      const rule = await prisma.alert_rules.findUnique({
         where: { id: ruleId }
       })
 
@@ -224,8 +223,8 @@ export class AlertRuleEngine {
       }
 
       const [matchingLogs, sampleLogsRaw] = await Promise.all([
-        this.prisma.log.count({ where }),
-        this.prisma.log.findMany({
+        prisma.logs.count({ where }),
+        prisma.logs.findMany({
           where,
           orderBy: { timestamp: 'desc' },
           take: 5,
@@ -277,7 +276,7 @@ export class AlertRuleEngine {
    */
   async getActiveRulesStatus(): Promise<any[]> {
     try {
-      const activeRules = await this.prisma.alertRule.findMany({
+      const activeRules = await prisma.alert_rules.findMany({
         where: { isEnabled: true },
         orderBy: { createdAt: 'desc' }
       })

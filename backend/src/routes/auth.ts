@@ -2,18 +2,17 @@ import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { AuthService } from '../services/AuthService';
 import { authMiddleware, getClientInfo } from '../middleware/auth';
 
 const router = Router();
-const prisma = new PrismaClient();
 const authService = new AuthService();
 
-// ログイン試行制限
+// ログイン試行制限 - 一時的に緩和
 const loginRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15分
-  max: 5, // 最大5回の試行
+  max: 100, // 最大100回の試行（テスト用）
   message: {
     success: false,
     error: {
@@ -212,7 +211,7 @@ router.post(
 
     try {
       // Check if user exists
-      const existingUser = await prisma.user.findFirst({
+      const existingUser = await prisma.users.findFirst({
         where: {
           OR: [{ username }, { email }]
         }
@@ -232,7 +231,7 @@ router.post(
       const hashedPassword = await bcrypt.hash(password, 12);
 
       // Create user
-      const user = await prisma.user.create({
+      const user = await prisma.users.create({
         data: {
           username,
           email,

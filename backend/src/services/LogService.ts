@@ -3,17 +3,15 @@
  * ログの収集・保存・検索・統計処理を担当
  */
 
-import { PrismaClient } from '@prisma/client'
 import { LogEntry, LogSearchParams, LogSearchResult, LogStatisticsParams, LogStatisticsResult } from '../types/log'
+import { prisma } from '../lib/prisma'
 import { getWebSocketService } from './WebSocketService.js'
 import { AlertRuleEngine } from './AlertRuleEngine.js'
 
 export class LogService {
-  private prisma: PrismaClient
   private alertRuleEngine: AlertRuleEngine
 
   constructor() {
-    this.prisma = new PrismaClient()
     this.alertRuleEngine = new AlertRuleEngine()
   }
 
@@ -35,7 +33,7 @@ export class LogService {
         // レベルを文字列に変換
         const logLevel = this.convertLevelToEnum(log.level)
 
-        const savedLog = await this.prisma.logs.create({
+        const savedLog = await prisma.logs.create({
           data: {
             timestamp: new Date(log.timestamp),
             level: logLevel,
@@ -134,7 +132,7 @@ export class LogService {
     }
 
     // 総件数取得
-    const total = await this.prisma.logs.count({ where })
+    const total = await prisma.logs.count({ where })
 
     // ページング計算
     const skip = (params.page - 1) * params.pageSize
@@ -145,7 +143,7 @@ export class LogService {
     orderBy[params.sortBy] = params.sortOrder
 
     // ログ取得
-    const logs = await this.prisma.logs.findMany({
+    const logs = await prisma.logs.findMany({
       where,
       orderBy,
       skip,
@@ -215,7 +213,7 @@ export class LogService {
       whereClause.level = { in: params.levels }
     }
 
-    const statistics = await this.prisma.log_statistics.groupBy({
+    const statistics = await prisma.log_statistics.groupBy({
       by: [groupByField as any],
       where: whereClause,
       _sum: {
@@ -258,22 +256,22 @@ export class LogService {
 
     // 直近1時間の統計
     const [totalLogs, errorLogs, warningLogs, recentLogs] = await Promise.all([
-      this.prisma.logs.count({
+      prisma.logs.count({
         where: { timestamp: { gte: oneHourAgo } }
       }),
-      this.prisma.logs.count({
+      prisma.logs.count({
         where: {
           timestamp: { gte: oneHourAgo },
           level: { in: ['ERROR', 'FATAL'] }
         }
       }),
-      this.prisma.logs.count({
+      prisma.logs.count({
         where: {
           timestamp: { gte: oneHourAgo },
           level: 'WARN'
         }
       }),
-      this.prisma.logs.findMany({
+      prisma.logs.findMany({
         where: { timestamp: { gte: oneHourAgo } },
         orderBy: { timestamp: 'desc' },
         take: 10,
@@ -408,6 +406,7 @@ export class LogService {
    * 統計情報更新
    */
   private async updateStatistics(logs: LogEntry[]) {
+    console.log('[LogService] 統計更新開始', { logCount: logs.length });
     const statsMap = new Map<string, number>()
 
     for (const log of logs) {
@@ -423,7 +422,7 @@ export class LogService {
       const [dateStr, hourStr, levelStr, category, source] = key.split('-')
 
       try {
-        await this.prisma.log_statistics.upsert({
+        await prisma.log_statistics.upsert({
           where: {
             date_hour_level_category_source: {
               date: new Date(dateStr),
@@ -471,28 +470,28 @@ export class LogService {
 
     await Promise.all([
       // DEBUG・TRACE削除
-      this.prisma.logs.deleteMany({
+      prisma.logs.deleteMany({
         where: {
           level: { in: ['DEBUG', 'TRACE'] },
           timestamp: { lt: retentionPeriods.debug }
         }
       }),
       // INFO削除
-      this.prisma.logs.deleteMany({
+      prisma.logs.deleteMany({
         where: {
           level: 'INFO',
           timestamp: { lt: retentionPeriods.info }
         }
       }),
       // WARN削除
-      this.prisma.logs.deleteMany({
+      prisma.logs.deleteMany({
         where: {
           level: 'WARN',
           timestamp: { lt: retentionPeriods.warn }
         }
       }),
       // ERROR・FATAL削除
-      this.prisma.logs.deleteMany({
+      prisma.logs.deleteMany({
         where: {
           level: { in: ['ERROR', 'FATAL'] },
           timestamp: { lt: retentionPeriods.error }

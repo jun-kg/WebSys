@@ -13,6 +13,7 @@ import logRoutes from './routes/logs.js'
 import alertRuleRoutes from './routes/alertRules.js'
 import notificationRoutes from './routes/notifications.js'
 import statisticsRoutes from './routes/statistics.js'
+import permissionInheritanceRoutes from './routes/permissionInheritance.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { initializeWebSocketService } from './services/WebSocketService.js'
 
@@ -60,6 +61,7 @@ app.use('/api/logs', logRoutes)
 app.use('/api/alert-rules', alertRuleRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/statistics', statisticsRoutes)
+app.use('/api/permissions', permissionInheritanceRoutes)
 
 // WebSocket接続状況API
 app.get('/api/websocket/status', (req, res) => {
@@ -93,3 +95,6 @@ process.on('SIGINT', () => {
     process.exit(0)
   })
 })
+
+// Export app for testing
+export { app }

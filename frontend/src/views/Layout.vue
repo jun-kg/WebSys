@@ -10,6 +10,7 @@
         text-color="#bfcbd9"
         active-text-color="#409eff"
         router
+        @select="handleMenuSelect"
       >
         <el-menu-item index="/dashboard">
           <el-icon><DataAnalysis /></el-icon>
@@ -40,6 +41,9 @@
           </el-menu-item>
           <el-menu-item index="/permission-matrix">
             <span>権限マトリクス</span>
+          </el-menu-item>
+          <el-menu-item index="/permission-template">
+            <span>権限テンプレート</span>
           </el-menu-item>
         </el-sub-menu>
         <el-menu-item index="/code-preview-demo">
@@ -142,6 +146,15 @@ const handleCommand = async (command: string) => {
     case 'settings':
       ElMessage.info('設定機能は準備中です')
       break
+  }
+}
+
+const handleMenuSelect = (index: string) => {
+  console.log('Menu selected:', index)
+  // デバッグ用: ルーター遷移を手動で実行
+  if (index === '/feature-management' || index === '/permission-matrix') {
+    console.log('Navigating to:', index)
+    router.push(index)
   }
 }
 </script>

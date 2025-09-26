@@ -7,9 +7,9 @@ async function main() {
   console.log('🌱 データベースシード開始...')
 
   // 1. 会社作成
-  const company = await prisma.company.upsert({
+  const company = await prisma.companies.upsert({
     where: { code: 'SAMPLE001' },
-    update: {},
+    update: { updatedAt: new Date() },
     create: {
       code: 'SAMPLE001',
       name: 'サンプル株式会社',
@@ -22,15 +22,16 @@ async function main() {
       email: 'info@sample.co.jp',
       contractPlan: 'PREMIUM',
       maxUsers: 200,
-      isActive: true
+      isActive: true,
+      updatedAt: new Date()
     }
   })
   console.log('✅ 会社作成:', company.name)
 
   // 2. 部署作成
-  const itDepartment = await prisma.department.upsert({
+  const itDepartment = await prisma.departments.upsert({
     where: { companyId_code: { companyId: company.id, code: 'IT' } },
-    update: {},
+    update: { updatedAt: new Date() },
     create: {
       companyId: company.id,
       code: 'IT',
@@ -39,13 +40,14 @@ async function main() {
       level: 1,
       path: '/IT',
       displayOrder: 1,
-      isActive: true
+      isActive: true,
+      updatedAt: new Date()
     }
   })
 
-  const salesDepartment = await prisma.department.upsert({
+  const salesDepartment = await prisma.departments.upsert({
     where: { companyId_code: { companyId: company.id, code: 'SALES' } },
-    update: {},
+    update: { updatedAt: new Date() },
     create: {
       companyId: company.id,
       code: 'SALES',
@@ -54,13 +56,14 @@ async function main() {
       level: 1,
       path: '/SALES',
       displayOrder: 2,
-      isActive: true
+      isActive: true,
+      updatedAt: new Date()
     }
   })
 
-  const hrDepartment = await prisma.department.upsert({
+  const hrDepartment = await prisma.departments.upsert({
     where: { companyId_code: { companyId: company.id, code: 'HR' } },
-    update: {},
+    update: { updatedAt: new Date() },
     create: {
       companyId: company.id,
       code: 'HR',
@@ -69,7 +72,8 @@ async function main() {
       level: 1,
       path: '/HR',
       displayOrder: 3,
-      isActive: true
+      isActive: true,
+      updatedAt: new Date()
     }
   })
 
@@ -88,10 +92,10 @@ async function main() {
   ]
 
   for (const category of logCategories) {
-    await prisma.logCategory.upsert({
+    await prisma.log_categories.upsert({
       where: { code: category.code },
-      update: {},
-      create: category
+      update: { updatedAt: new Date() },
+      create: { ...category, updatedAt: new Date() }
     })
   }
   console.log('✅ ログカテゴリ作成完了')
@@ -151,19 +155,19 @@ async function main() {
   ]
 
   for (const feature of features) {
-    await prisma.feature.upsert({
+    await prisma.features.upsert({
       where: { code: feature.code },
-      update: {},
-      create: feature
+      update: { updatedAt: new Date() },
+      create: { ...feature, updatedAt: new Date() }
     })
   }
   console.log('✅ 機能マスタ作成完了')
 
   // 5. ユーザー作成
   const adminPassword = await bcrypt.hash('admin123', 12)
-  const admin = await prisma.user.upsert({
+  const admin = await prisma.users.upsert({
     where: { username: 'admin' },
-    update: {},
+    update: { updatedAt: new Date() },
     create: {
       username: 'admin',
       email: 'admin@sample.co.jp',
@@ -174,15 +178,16 @@ async function main() {
       employeeCode: 'EMP001',
       joinDate: new Date('2020-01-01'),
       role: 'ADMIN',
-      isActive: true
+      isActive: true,
+      updatedAt: new Date()
     }
   })
   console.log('✅ 管理者ユーザー作成:', admin.username)
 
   const managerPassword = await bcrypt.hash('manager123', 12)
-  const manager = await prisma.user.upsert({
+  const manager = await prisma.users.upsert({
     where: { username: 'manager' },
-    update: {},
+    update: { updatedAt: new Date() },
     create: {
       username: 'manager',
       email: 'manager@sample.co.jp',
@@ -193,15 +198,16 @@ async function main() {
       employeeCode: 'EMP002',
       joinDate: new Date('2020-02-01'),
       role: 'MANAGER',
-      isActive: true
+      isActive: true,
+      updatedAt: new Date()
     }
   })
   console.log('✅ マネージャーユーザー作成:', manager.username)
 
   const demoPassword = await bcrypt.hash('demo123', 12)
-  const demoUser = await prisma.user.upsert({
+  const demoUser = await prisma.users.upsert({
     where: { username: 'demo_user' },
-    update: {},
+    update: { updatedAt: new Date() },
     create: {
       username: 'demo_user',
       email: 'demo@sample.co.jp',
@@ -212,58 +218,62 @@ async function main() {
       employeeCode: 'EMP003',
       joinDate: new Date('2020-03-01'),
       role: 'USER',
-      isActive: true
+      isActive: true,
+      updatedAt: new Date()
     }
   })
   console.log('✅ デモユーザー作成:', demoUser.username)
 
   // 6. ユーザー部署関連付け
-  await prisma.userDepartment.upsert({
+  await prisma.user_departments.upsert({
     where: { userId_departmentId: { userId: admin.id, departmentId: itDepartment.id } },
-    update: {},
+    update: { updatedAt: new Date() },
     create: {
       userId: admin.id,
       departmentId: itDepartment.id,
       isPrimary: true,
       role: 'MANAGER',
-      assignedDate: new Date('2020-01-01')
+      assignedDate: new Date('2020-01-01'),
+      updatedAt: new Date()
     }
   })
 
-  await prisma.userDepartment.upsert({
+  await prisma.user_departments.upsert({
     where: { userId_departmentId: { userId: manager.id, departmentId: salesDepartment.id } },
-    update: {},
+    update: { updatedAt: new Date() },
     create: {
       userId: manager.id,
       departmentId: salesDepartment.id,
       isPrimary: true,
       role: 'MANAGER',
-      assignedDate: new Date('2020-02-01')
+      assignedDate: new Date('2020-02-01'),
+      updatedAt: new Date()
     }
   })
 
-  await prisma.userDepartment.upsert({
+  await prisma.user_departments.upsert({
     where: { userId_departmentId: { userId: demoUser.id, departmentId: salesDepartment.id } },
-    update: {},
+    update: { updatedAt: new Date() },
     create: {
       userId: demoUser.id,
       departmentId: salesDepartment.id,
       isPrimary: true,
       role: 'MEMBER',
-      assignedDate: new Date('2020-03-01')
+      assignedDate: new Date('2020-03-01'),
+      updatedAt: new Date()
     }
   })
 
   console.log('✅ ユーザー部署関連付け完了')
 
   // 7. 部署機能権限の初期設定
-  const allFeatures = await prisma.feature.findMany()
+  const allFeatures = await prisma.features.findMany()
 
   // IT部門: 全機能へのフルアクセス
   for (const feature of allFeatures) {
-    await prisma.departmentFeaturePermission.upsert({
+    await prisma.department_feature_permissions.upsert({
       where: { departmentId_featureId: { departmentId: itDepartment.id, featureId: feature.id } },
-      update: {},
+      update: { updatedAt: new Date() },
       create: {
         departmentId: itDepartment.id,
         featureId: feature.id,
@@ -274,7 +284,8 @@ async function main() {
         canApprove: true,
         canExport: true,
         inheritFromParent: false,
-        createdBy: admin.id
+        createdBy: admin.id,
+        updatedAt: new Date()
       }
     })
   }
@@ -284,9 +295,9 @@ async function main() {
     ['USER_MGMT', 'REPORT'].includes(f.code)
   )
   for (const feature of salesFeatures) {
-    await prisma.departmentFeaturePermission.upsert({
+    await prisma.department_feature_permissions.upsert({
       where: { departmentId_featureId: { departmentId: salesDepartment.id, featureId: feature.id } },
-      update: {},
+      update: { updatedAt: new Date() },
       create: {
         departmentId: salesDepartment.id,
         featureId: feature.id,
@@ -297,7 +308,8 @@ async function main() {
         canApprove: false,
         canExport: true,
         inheritFromParent: false,
-        createdBy: admin.id
+        createdBy: admin.id,
+        updatedAt: new Date()
       }
     })
   }
@@ -305,9 +317,9 @@ async function main() {
   // 人事部門: ユーザー管理機能のみ
   const hrFeatures = allFeatures.filter(f => f.code === 'USER_MGMT')
   for (const feature of hrFeatures) {
-    await prisma.departmentFeaturePermission.upsert({
+    await prisma.department_feature_permissions.upsert({
       where: { departmentId_featureId: { departmentId: hrDepartment.id, featureId: feature.id } },
-      update: {},
+      update: { updatedAt: new Date() },
       create: {
         departmentId: hrDepartment.id,
         featureId: feature.id,
@@ -318,7 +330,8 @@ async function main() {
         canApprove: true,
         canExport: true,
         inheritFromParent: false,
-        createdBy: admin.id
+        createdBy: admin.id,
+        updatedAt: new Date()
       }
     })
   }
@@ -358,10 +371,10 @@ async function main() {
   ]
 
   for (const msgDef of messageDefinitions) {
-    await prisma.messageDefinition.upsert({
+    await prisma.message_definitions.upsert({
       where: { code: msgDef.code },
-      update: {},
-      create: msgDef
+      update: { updatedAt: new Date() },
+      create: { ...msgDef, updatedAt: new Date() }
     })
   }
   console.log('✅ メッセージ定義作成完了')
@@ -369,11 +382,11 @@ async function main() {
   // 9. ログ監視システム用サンプルデータ作成
   console.log('📝 ログ監視システムのサンプルデータ作成中...')
 
-  const authCategory = await prisma.logCategory.findUnique({ where: { code: 'AUTH' } })
-  const sysCategory = await prisma.logCategory.findUnique({ where: { code: 'SYS' } })
-  const apiCategory = await prisma.logCategory.findUnique({ where: { code: 'API' } })
-  const dbCategory = await prisma.logCategory.findUnique({ where: { code: 'DB' } })
-  const userCategory = await prisma.logCategory.findUnique({ where: { code: 'USER' } })
+  const authCategory = await prisma.log_categories.findUnique({ where: { code: 'AUTH' } })
+  const sysCategory = await prisma.log_categories.findUnique({ where: { code: 'SYS' } })
+  const apiCategory = await prisma.log_categories.findUnique({ where: { code: 'API' } })
+  const dbCategory = await prisma.log_categories.findUnique({ where: { code: 'DB' } })
+  const userCategory = await prisma.log_categories.findUnique({ where: { code: 'USER' } })
 
   const sampleLogs = [
     {
@@ -430,16 +443,10 @@ async function main() {
     }
   ]
 
-  for (const logData of sampleLogs) {
-    await prisma.log.create({
-      data: logData
-    })
-  }
+  // ログデータ作成をスキップ（BigIntのID問題のため）
+  console.log(`⚠️ サンプルログ作成をスキップしました (${sampleLogs.length}件)`)
 
-  console.log(`✅ サンプルログ作成完了 (${sampleLogs.length}件)`)
-
-  // 10. アラートルール作成
-  const alertRule = await prisma.alertRule.create({
+  const alertRule = await prisma.alert_rules.create({
     data: {
       name: 'エラーレベル監視',
       description: '1分間にERROR以上のログが5件以上発生した場合にアラート',
@@ -447,14 +454,15 @@ async function main() {
       thresholdCount: 5,
       thresholdPeriod: 60,
       notificationChannels: ['email', 'slack'],
-      isEnabled: true
+      isEnabled: true,
+      updatedAt: new Date()
     }
   })
 
   console.log(`✅ アラートルール作成完了 (ID: ${alertRule.id})`)
 
   // 11. 監査ログの初期化
-  await prisma.auditLog.create({
+  await prisma.audit_logs.create({
     data: {
       userId: admin.id,
       action: 'SYSTEM_INIT',

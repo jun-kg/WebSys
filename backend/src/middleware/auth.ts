@@ -54,11 +54,51 @@ export const authMiddleware = async (
     const verificationResult = await authService.verifyToken(token);
 
     if (!verificationResult.isValid) {
-      return res.status(401).json({
+      // エラーコードに基づいて適切なHTTPステータスを返す
+      const errorCode = verificationResult.errorCode || 'AUTH_003';
+
+      // より詳細なステータスコード判定
+      const statusCode =
+        // トークン関連エラー (401)
+        ['TOKEN_MISSING', 'TOKEN_EXPIRED', 'TOKEN_INVALID', 'TOKEN_MALFORMED',
+         'TOKEN_PAYLOAD_INVALID', 'TOKEN_VERIFICATION_ERROR'].includes(errorCode) ? 401 :
+
+        // セッション関連エラー (401)
+        ['SESSION_EXPIRED', 'SESSION_INVALID', 'SESSION_NOT_FOUND', 'SESSION_INACTIVE'].includes(errorCode) ? 401 :
+
+        // ユーザー関連エラー (403)
+        ['USER_INVALID', 'USER_NOT_FOUND', 'USER_INACTIVE'].includes(errorCode) ? 403 :
+
+        // システムエラー (500)
+        errorCode === 'SYSTEM_ERROR' ? 500 :
+
+        // デフォルト (401)
+        401;
+
+      // ログレベルの調整（システムエラーのみERRORログ、その他は情報ログ）
+      if (errorCode === 'SYSTEM_ERROR') {
+        console.error('Auth middleware system error:', {
+          errorCode,
+          error: verificationResult.error,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        console.log('Auth middleware validation failed:', {
+          errorCode,
+          message: verificationResult.error
+        });
+      }
+
+      return res.status(statusCode).json({
         success: false,
         error: {
-          code: 'AUTH_003',
-          message: verificationResult.error
+          code: errorCode,
+          message: verificationResult.error,
+          ...(statusCode >= 500 && {
+            // 500番台エラーの場合は追加情報を含める
+            timestamp: new Date().toISOString(),
+            requestId: req.headers['x-request-id'] || 'unknown'
+          })
         }
       });
     }
@@ -68,12 +108,24 @@ export const authMiddleware = async (
 
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    // 予期しないミドルウェアエラーの詳細ログ
+    console.error('Auth middleware unexpected error:', {
+      error: error.message,
+      stack: error.stack,
+      url: req.url,
+      method: req.method,
+      timestamp: new Date().toISOString(),
+      userAgent: req.headers['user-agent'],
+      ip: req.ip || req.connection?.remoteAddress
+    });
+
     return res.status(500).json({
       success: false,
       error: {
         code: 'SYS_001',
-        message: 'Internal server error'
+        message: '認証処理中にシステムエラーが発生しました',
+        timestamp: new Date().toISOString(),
+        requestId: req.headers['x-request-id'] || 'unknown'
       }
     });
   }

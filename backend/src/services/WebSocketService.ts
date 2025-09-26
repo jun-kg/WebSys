@@ -33,19 +33,76 @@ export class WebSocketService {
   }
 
   /**
-   * JWT認証ミドルウェア
+   * JWT認証ミドルウェア（詳細エラーハンドリング対応）
    */
   private setupMiddleware() {
     this.io.use((socket, next) => {
       try {
-        const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.replace('Bearer ', '')
+        const token = socket.handshake.auth?.token ||
+                      socket.handshake.headers?.authorization?.replace('Bearer ', '')
 
-        if (!token) {
-          console.log('WebSocket: No token provided')
-          return next(new Error('Authentication error: No token provided'))
+        // トークン存在チェック
+        if (!token || typeof token !== 'string') {
+          console.log('WebSocket: Token missing or invalid type', {
+            socketId: socket.id,
+            ip: socket.handshake.address,
+            userAgent: socket.handshake.headers['user-agent']
+          })
+          return next(new Error('WEBSOCKET_TOKEN_MISSING: WebSocket接続にトークンが必要です'))
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as any
+        // トークン形式チェック
+        if (token.length < 10 || token.length > 2000) {
+          console.log('WebSocket: Token malformed (invalid length)', {
+            socketId: socket.id,
+            tokenLength: token.length
+          })
+          return next(new Error('WEBSOCKET_TOKEN_MALFORMED: WebSocketトークンの形式が無効です'))
+        }
+
+        // JWT検証
+        let decoded: any
+        try {
+          decoded = jwt.verify(token, process.env.JWT_SECRET || 'development-secret-key')
+        } catch (jwtError) {
+          let errorMessage: string
+          let errorCode: string
+
+          if (jwtError instanceof jwt.TokenExpiredError) {
+            errorCode = 'WEBSOCKET_TOKEN_EXPIRED'
+            const expiredAt = new Date(jwtError.expiredAt).toLocaleString('ja-JP')
+            errorMessage = `WebSocketトークンが期限切れです (期限: ${expiredAt})`
+          } else if (jwtError instanceof jwt.JsonWebTokenError) {
+            errorCode = 'WEBSOCKET_TOKEN_INVALID'
+            const errorDetail = jwtError.message.includes('invalid signature') ? '署名が無効' :
+                               jwtError.message.includes('malformed') ? '形式が不正' :
+                               jwtError.message.includes('invalid token') ? 'トークンが不正' :
+                               'JWT解析エラー'
+            errorMessage = `WebSocketトークンが無効です (${errorDetail})`
+          } else {
+            errorCode = 'WEBSOCKET_TOKEN_ERROR'
+            errorMessage = `WebSocketトークン検証エラー: ${jwtError.message}`
+          }
+
+          console.error('WebSocket JWT verification error:', {
+            error: jwtError.message,
+            socketId: socket.id,
+            tokenLength: token.length,
+            timestamp: new Date().toISOString()
+          })
+
+          return next(new Error(`${errorCode}: ${errorMessage}`))
+        }
+
+        // ペイロード検証
+        if (!decoded.userId || !decoded.username) {
+          console.error('WebSocket: Token payload invalid', {
+            socketId: socket.id,
+            hasUserId: !!decoded.userId,
+            hasUsername: !!decoded.username
+          })
+          return next(new Error('WEBSOCKET_PAYLOAD_INVALID: WebSocketトークンのペイロードが不完全です'))
+        }
 
         // 認証されたソケット情報を保存
         this.authenticatedSockets.set(socket.id, {
@@ -55,11 +112,22 @@ export class WebSocketService {
           role: decoded.role
         })
 
-        console.log(`WebSocket: User ${decoded.username} connected (${socket.id})`)
+        console.log(`WebSocket: User ${decoded.username} authenticated (${socket.id})`, {
+          userId: decoded.userId,
+          role: decoded.role,
+          ip: socket.handshake.address
+        })
+
         next()
       } catch (error) {
-        console.error('WebSocket Authentication error:', error)
-        next(new Error('Authentication error: Invalid token'))
+        // 予期しないシステムエラー
+        console.error('WebSocket Authentication system error:', {
+          error: error.message,
+          stack: error.stack,
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        })
+        next(new Error(`WEBSOCKET_SYSTEM_ERROR: WebSocket認証処理中にシステムエラーが発生しました`))
       }
     })
   }

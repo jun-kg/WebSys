@@ -160,7 +160,7 @@ let refreshInterval: number | null = null
 // APIから統計データを取得
 const fetchDashboardStats = async () => {
   try {
-    const token = localStorage.getItem('authToken')
+    const token = localStorage.getItem('token')
     if (!token) {
       ElMessage.error('認証が必要です')
       return

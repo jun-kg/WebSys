@@ -5,7 +5,7 @@
 
 import axios from 'axios'
 import nodemailer from 'nodemailer'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '../lib/prisma'
 import type { LogEntry } from '../types/log'
 
 export interface NotificationConfig {
@@ -43,12 +43,11 @@ export interface NotificationMessage {
 }
 
 export class NotificationService {
-  private prisma: PrismaClient
   private emailTransporter: nodemailer.Transporter | null = null
   private config: NotificationConfig = {}
 
   constructor() {
-    this.prisma = new PrismaClient()
+    // Prismaシングルトンを使用
     this.loadConfiguration()
   }
 

@@ -1,10 +1,9 @@
 import { Router } from 'express';
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // 認証ミドルウェアを適用
 router.use(authMiddleware);
@@ -35,15 +34,15 @@ router.get('/tree', async (req: Request, res: Response) => {
       where.isActive = true;
     }
 
-    const departments = await prisma.department.findMany({
+    const departments = await prisma.departments.findMany({
       where,
       include: {
-        parent: {
+        departments: {
           select: { id: true, name: true }
         },
         _count: {
           select: {
-            userDepartments: {
+            user_departments: {
               where: {
                 expiredDate: null
               }
@@ -117,20 +116,20 @@ router.get('/', async (req: Request, res: Response) => {
     }
 
     const [departments, total] = await Promise.all([
-      prisma.department.findMany({
+      prisma.departments.findMany({
         where,
         include: {
-          parent: {
+          departments: {
             select: { id: true, name: true, path: true }
           },
           _count: {
             select: {
-              userDepartments: {
+              user_departments: {
                 where: {
                   expiredDate: null
                 }
               },
-              children: {
+              other_departments: {
                 where: {
                   isActive: true
                 }
@@ -146,7 +145,7 @@ router.get('/', async (req: Request, res: Response) => {
         skip: (parseInt(page as string) - 1) * parseInt(limit as string),
         take: parseInt(limit as string)
       }),
-      prisma.department.count({ where })
+      prisma.departments.count({ where })
     ]);
 
     res.json({
@@ -154,8 +153,8 @@ router.get('/', async (req: Request, res: Response) => {
       data: {
         departments: departments.map(dept => ({
           ...dept,
-          userCount: dept._count.userDepartments,
-          childDepartments: dept._count.children
+          userCount: dept._count.user_departments,
+          childDepartments: dept._count.other_departments
         })),
         pagination: {
           page: parseInt(page as string),
@@ -189,20 +188,20 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const departmentId = parseInt(req.params.id);
 
-    const department = await prisma.department.findUnique({
+    const department = await prisma.departments.findUnique({
       where: { id: departmentId },
       include: {
         company: {
           select: { id: true, name: true }
         },
-        parent: {
+        departments: {
           select: { id: true, name: true, path: true }
         },
-        children: {
+        other_departments: {
           where: { isActive: true },
           select: { id: true, name: true, code: true, level: true }
         },
-        userDepartments: {
+        user_departments: {
           where: {
             expiredDate: null
           },
@@ -214,7 +213,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         },
         _count: {
           select: {
-            userDepartments: {
+            user_departments: {
               where: {
                 expiredDate: null
               }
@@ -236,7 +235,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     const response = {
       ...department,
-      users: department.userDepartments.map(ud => ({
+      users: department.user_departments.map(ud => ({
         id: ud.user.id,
         name: ud.user.name,
         email: ud.user.email,
@@ -245,11 +244,11 @@ router.get('/:id', async (req: Request, res: Response) => {
         isPrimary: ud.isPrimary,
         assignedDate: ud.assignedDate
       })),
-      totalUsers: department._count.userDepartments,
-      childDepartments: department.children.length
+      totalUsers: department._count.user_departments,
+      childDepartments: department.other_departments.length
     };
 
-    delete response.userDepartments;
+    delete response.user_departments;
     delete response._count;
 
     res.json({
@@ -292,7 +291,7 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     // 重複チェック
-    const existingDept = await prisma.department.findFirst({
+    const existingDept = await prisma.departments.findFirst({
       where: {
         companyId,
         code
@@ -314,7 +313,7 @@ router.post('/', async (req: Request, res: Response) => {
     let path = '';
 
     if (parentId) {
-      const parent = await prisma.department.findUnique({
+      const parent = await prisma.departments.findUnique({
         where: { id: parentId },
         select: { level: true, path: true }
       });
@@ -335,7 +334,7 @@ router.post('/', async (req: Request, res: Response) => {
       path = '/{{id}}';
     }
 
-    const department = await prisma.department.create({
+    const department = await prisma.departments.create({
       data: {
         companyId,
         code,
@@ -347,7 +346,7 @@ router.post('/', async (req: Request, res: Response) => {
         displayOrder: displayOrder ?? 0
       },
       include: {
-        parent: {
+        departments: {
           select: { id: true, name: true }
         }
       }
@@ -355,7 +354,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     // パスの実際のIDで更新
     const finalPath = path.replace('{{id}}', department.id.toString());
-    await prisma.department.update({
+    await prisma.departments.update({
       where: { id: department.id },
       data: { path: finalPath }
     });
@@ -392,7 +391,7 @@ function buildDepartmentTree(departments: any[]): any[] {
   departments.forEach(dept => {
     deptMap.set(dept.id, {
       ...dept,
-      userCount: dept._count.userDepartments,
+      userCount: dept._count.user_departments,
       children: []
     });
   });

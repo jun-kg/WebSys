@@ -1,109 +1,97 @@
 <template>
   <div class="permission-matrix">
     <!-- ページヘッダー -->
-    <CommonCard variant="bordered" class="page-header" responsive>
-      <CommonRow align="middle" justify="space-between">
-        <CommonCol :span="16">
+    <el-card class="page-header">
+      <el-row align="middle" justify="space-between">
+        <el-col :span="16">
           <h1 class="page-title">部署×機能権限マトリクス</h1>
           <p class="page-description">
             部署ごとの機能権限を一覧表示・編集できます
           </p>
-        </CommonCol>
-        <CommonCol :span="8" class="text-right">
-          <CommonButton
-            variant="primary"
+        </el-col>
+        <el-col :span="8" class="text-right">
+          <el-button
+            type="primary"
             @click="handleSaveAll"
             :loading="saving"
-            responsive
-            touch-optimized
           >
-            <template #prefix>
-              <Icon name="save" />
-            </template>
+            <el-icon><Document /></el-icon>
             一括保存
-          </CommonButton>
-        </CommonCol>
-      </CommonRow>
-    </CommonCard>
+          </el-button>
+        </el-col>
+      </el-row>
+    </el-card>
 
     <!-- フィルター・検索 -->
-    <CommonCard variant="default" class="filter-section" responsive>
-      <CommonForm
+    <el-card class="filter-section">
+      <el-form
         :model="filterForm"
-        variant="inline"
+        inline
         class="filter-form"
-        responsive
       >
-        <CommonFormItem label="部署">
-          <CommonSelect
+        <el-form-item label="部署">
+          <el-select
             v-model="filterForm.departmentIds"
-            variant="multiple"
             placeholder="部署を選択（複数選択可能）"
-            :clearable="true"
+            clearable
             multiple
             collapse-tags
             style="min-width: 300px"
-            responsive
           >
-            <CommonOption
+            <el-option
               v-for="dept in departments"
               :key="dept.id"
               :label="getDisplayName(dept)"
               :value="dept.id"
             />
-          </CommonSelect>
-        </CommonFormItem>
-        <CommonFormItem label="機能カテゴリ">
-          <CommonSelect
+          </el-select>
+        </el-form-item>
+        <el-form-item label="機能カテゴリ">
+          <el-select
             v-model="filterForm.category"
             placeholder="カテゴリを選択"
-            :clearable="true"
-            responsive
+            clearable
           >
-            <CommonOption
+            <el-option
               v-for="category in categories"
               :key="category.code"
               :label="category.name"
               :value="category.code"
             />
-          </CommonSelect>
-        </CommonFormItem>
-        <CommonFormItem>
-          <CommonButton
-            variant="primary"
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button
+            type="primary"
             @click="loadPermissionMatrix"
             :loading="loading"
-            responsive
           >
             表示更新
-          </CommonButton>
-          <CommonButton
-            variant="default"
+          </el-button>
+          <el-button
             @click="handleExport"
-            responsive
           >
             CSV出力
-          </CommonButton>
-          <CommonButton
-            variant="success"
+          </el-button>
+          <el-button
+            type="success"
             @click="openTemplateDialog"
-            responsive
           >
             テンプレート管理
-          </CommonButton>
-        </CommonFormItem>
-      </CommonForm>
-    </CommonCard>
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
 
     <!-- 権限マトリクス表示 -->
-    <CommonCard variant="default" responsive>
+    <el-card>
       <div class="matrix-container" v-loading="loading">
         <!-- 凡例 -->
         <div class="legend-section">
           <h3>権限記号</h3>
           <div class="legend-items">
             <span v-for="(desc, code) in legend" :key="code" class="legend-item">
-              <CommonTag size="small">{{ code }}</CommonTag>
+              <el-tag size="small">{{ code }}</el-tag>
               <span>{{ desc }}</span>
             </span>
           </div>
@@ -111,14 +99,13 @@
 
         <!-- マトリクステーブル -->
         <div class="matrix-table" v-if="matrixData.length > 0">
-          <CommonTable
+          <el-table
             :data="matrixData"
-            :show-header="true"
             border
-            responsive
+            style="width: 100%"
           >
             <!-- 部署名列 -->
-            <CommonTableColumn
+            <el-table-column
               prop="departmentName"
               label="部署名"
               fixed="left"
@@ -126,11 +113,10 @@
             />
 
             <!-- 機能列 -->
-            <CommonTableColumn
+            <el-table-column
               v-for="feature in visibleFeatures"
               :key="feature.code"
               :label="feature.name"
-              :prop="`feature_${feature.code}`"
               width="120"
               align="center"
             >
@@ -154,8 +140,8 @@
                   </span>
                 </div>
               </template>
-            </CommonTableColumn>
-          </CommonTable>
+            </el-table-column>
+          </el-table>
         </div>
 
         <!-- データなしの場合 -->
@@ -163,7 +149,7 @@
           <el-empty description="表示するデータがありません" />
         </div>
       </div>
-    </CommonCard>
+    </el-card>
 
     <!-- 権限編集ダイアログ -->
     <el-dialog
@@ -214,21 +200,18 @@
       </div>
 
       <template #footer>
-        <CommonButton
-          variant="default"
+        <el-button
           @click="closePermissionDialog"
-          responsive
         >
           キャンセル
-        </CommonButton>
-        <CommonButton
-          variant="primary"
+        </el-button>
+        <el-button
+          type="primary"
           @click="savePermission"
           :loading="savingPermission"
-          responsive
         >
           保存
-        </CommonButton>
+        </el-button>
       </template>
     </el-dialog>
 
@@ -244,57 +227,51 @@
         <div class="template-list">
           <div class="template-header">
             <h4>保存済みテンプレート</h4>
-            <CommonButton
-              variant="primary"
+            <el-button
+              type="primary"
               size="small"
               @click="showCreateTemplateDialog = true"
-              responsive
             >
               新規作成
-            </CommonButton>
+            </el-button>
           </div>
 
-          <CommonTable
+          <el-table
             :data="templates"
-            :loading="loadingTemplates"
-            responsive
+            v-loading="loadingTemplates"
           >
-            <CommonTableColumn prop="name" label="テンプレート名" />
-            <CommonTableColumn prop="description" label="説明" />
-            <CommonTableColumn prop="category" label="カテゴリ" width="100" />
-            <CommonTableColumn label="操作" width="180" align="center">
+            <el-table-column prop="name" label="テンプレート名" />
+            <el-table-column prop="description" label="説明" />
+            <el-table-column prop="category" label="カテゴリ" width="100" />
+            <el-table-column label="操作" width="180" align="center">
               <template #default="{ row }">
-                <CommonButton
+                <el-button
                   size="small"
                   @click="applyTemplate(row)"
                   :disabled="filterForm.departmentIds.length === 0"
-                  responsive
                 >
                   適用
-                </CommonButton>
-                <CommonButton
+                </el-button>
+                <el-button
                   v-if="!row.isPreset"
                   size="small"
-                  variant="danger"
+                  type="danger"
                   @click="deleteTemplate(row)"
-                  responsive
                 >
                   削除
-                </CommonButton>
+                </el-button>
               </template>
-            </CommonTableColumn>
-          </CommonTable>
+            </el-table-column>
+          </el-table>
         </div>
       </div>
 
       <template #footer>
-        <CommonButton
-          variant="default"
+        <el-button
           @click="closeTemplateDialog"
-          responsive
         >
           閉じる
-        </CommonButton>
+        </el-button>
       </template>
     </el-dialog>
 
@@ -373,22 +350,19 @@
       </div>
 
       <template #footer>
-        <CommonButton
-          variant="default"
+        <el-button
           @click="closeCreateTemplateDialog"
-          responsive
         >
           キャンセル
-        </CommonButton>
-        <CommonButton
-          variant="primary"
+        </el-button>
+        <el-button
+          type="primary"
           @click="createTemplate"
           :loading="creatingTemplate"
           :disabled="!newTemplate.name || sourcePermissions.length === 0"
-          responsive
         >
           作成
-        </CommonButton>
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -397,19 +371,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, ElLoading, ElEmpty, ElDialog, ElCheckbox, ElForm, ElFormItem, ElInput, ElSelect, ElOption, ElTag } from 'element-plus'
-import {
-  CommonCard,
-  CommonRow,
-  CommonCol,
-  CommonForm,
-  CommonFormItem,
-  CommonSelect,
-  CommonOption,
-  CommonButton,
-  CommonTable,
-  CommonTableColumn,
-  CommonTag
-} from '@company/shared-components'
+import { Document } from '@element-plus/icons-vue'
+// Element Plus components are auto-imported
 import { permissionAPI, type PermissionTemplate } from '@/api/permissions'
 import { departmentAPI } from '@/api/departments'
 import { featureAPI } from '@/api/features'

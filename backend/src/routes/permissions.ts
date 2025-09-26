@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
-const prisma = new PrismaClient();
+// Prismaシングルトンを使用
 
 // 認証ミドルウェアを適用
 router.use(authMiddleware);
@@ -18,7 +18,7 @@ router.get('/department/:departmentId', async (req: Request, res: Response) => {
     const departmentId = parseInt(req.params.departmentId);
 
     // 部署情報を取得
-    const department = await prisma.department.findUnique({
+    const department = await prisma.departments.findUnique({
       where: { id: departmentId },
       select: { id: true, name: true, parentId: true }
     });
@@ -34,7 +34,7 @@ router.get('/department/:departmentId', async (req: Request, res: Response) => {
     }
 
     // 全機能を取得
-    const features = await prisma.feature.findMany({
+    const features = await prisma.features.findMany({
       where: { isActive: true },
       orderBy: [
         { category: 'asc' },
@@ -44,10 +44,10 @@ router.get('/department/:departmentId', async (req: Request, res: Response) => {
     });
 
     // 部署の権限設定を取得
-    const permissions = await prisma.departmentFeaturePermission.findMany({
+    const permissions = await prisma.department_feature_permissions.findMany({
       where: { departmentId },
       include: {
-        feature: {
+        features: {
           select: { id: true, code: true, name: true, category: true }
         }
       }
@@ -115,7 +115,7 @@ router.post('/department/:departmentId', async (req: Request, res: Response) => 
     const userId = (req as any).user.id; // 認証ミドルウェアで設定
 
     // 部署の存在確認
-    const department = await prisma.department.findUnique({
+    const department = await prisma.departments.findUnique({
       where: { id: departmentId }
     });
 
@@ -146,7 +146,7 @@ router.post('/department/:departmentId', async (req: Request, res: Response) => 
         } = permData;
 
         // 既存の権限設定を取得
-        const existingPermission = await tx.departmentFeaturePermission.findUnique({
+        const existingPermission = await tx.department_feature_permissions.findUnique({
           where: {
             departmentId_featureId: {
               departmentId,
@@ -179,7 +179,7 @@ router.post('/department/:departmentId', async (req: Request, res: Response) => 
           };
 
           // 更新
-          result = await tx.departmentFeaturePermission.update({
+          result = await tx.department_feature_permissions.update({
             where: {
               departmentId_featureId: {
                 departmentId,
@@ -190,7 +190,7 @@ router.post('/department/:departmentId', async (req: Request, res: Response) => 
           });
 
           // 監査ログを記録
-          await tx.auditLog.create({
+          await tx.audit_logs.create({
             data: {
               userId,
               action: 'MODIFY',
@@ -210,7 +210,7 @@ router.post('/department/:departmentId', async (req: Request, res: Response) => 
           });
         } else {
           // 新規作成
-          result = await tx.departmentFeaturePermission.create({
+          result = await tx.department_feature_permissions.create({
             data: {
               departmentId,
               featureId,
@@ -220,7 +220,7 @@ router.post('/department/:departmentId', async (req: Request, res: Response) => 
           });
 
           // 監査ログを記録
-          await tx.auditLog.create({
+          await tx.audit_logs.create({
             data: {
               userId,
               action: 'GRANT',
@@ -278,13 +278,13 @@ router.get('/user/:userId', async (req: Request, res: Response) => {
     const userId = parseInt(req.params.userId);
 
     // ユーザー情報と所属部署を取得
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: userId },
       include: {
-        userDepartments: {
+        user_departments: {
           where: { expiredDate: null },
           include: {
-            department: {
+            departments: {
               select: { id: true, name: true, path: true }
             }
           }
@@ -303,7 +303,7 @@ router.get('/user/:userId', async (req: Request, res: Response) => {
     }
 
     // ユーザーの所属部署IDを取得
-    const departmentIds = user.userDepartments.map(ud => ud.departmentId);
+    const departmentIds = user.user_departments.map(ud => ud.departmentId);
 
     if (departmentIds.length === 0) {
       return res.json({
@@ -318,15 +318,15 @@ router.get('/user/:userId', async (req: Request, res: Response) => {
     }
 
     // 各部署の権限を取得
-    const permissions = await prisma.departmentFeaturePermission.findMany({
+    const permissions = await prisma.department_feature_permissions.findMany({
       where: {
         departmentId: { in: departmentIds }
       },
       include: {
-        feature: {
+        features: {
           select: { id: true, code: true, name: true, category: true }
         },
-        department: {
+        departments: {
           select: { id: true, name: true }
         }
       }
@@ -341,9 +341,9 @@ router.get('/user/:userId', async (req: Request, res: Response) => {
         userId: user.id,
         userName: user.name,
         effectivePermissions,
-        departments: user.userDepartments.map(ud => ({
-          id: ud.department.id,
-          name: ud.department.name,
+        departments: user.user_departments.map(ud => ({
+          id: ud.departments.id,
+          name: ud.departments.name,
           isPrimary: ud.isPrimary,
           role: ud.role
         }))
@@ -520,18 +520,18 @@ router.get('/matrix', async (req: Request, res: Response) => {
 
     // 部署と機能を取得
     const [departments, features] = await Promise.all([
-      prisma.department.findMany({
+      prisma.departments.findMany({
         where: deptWhere,
         orderBy: [{ level: 'asc' }, { displayOrder: 'asc' }]
       }),
-      prisma.feature.findMany({
+      prisma.features.findMany({
         where: { isActive: true },
         orderBy: [{ category: 'asc' }, { displayOrder: 'asc' }]
       })
     ]);
 
     // 全部署の権限設定を取得
-    const allPermissions = await prisma.departmentFeaturePermission.findMany({
+    const allPermissions = await prisma.department_feature_permissions.findMany({
       where: {
         departmentId: { in: departments.map(d => d.id) }
       }
@@ -603,13 +603,13 @@ function calculateEffectivePermissions(permissions: any[]): any[] {
   const featureMap = new Map();
 
   permissions.forEach(perm => {
-    const featureId = perm.feature.id;
+    const featureId = perm.features.id;
     const existing = featureMap.get(featureId);
 
     if (!existing) {
       featureMap.set(featureId, {
-        featureCode: perm.feature.code,
-        featureName: perm.feature.name,
+        featureCode: perm.features.code,
+        featureName: perm.features.name,
         permissions: {
           canView: perm.canView,
           canCreate: perm.canCreate,
@@ -636,24 +636,24 @@ function calculateEffectivePermissions(permissions: any[]): any[] {
 
 async function checkUserPermission(userId: number, featureCode: string, action: string): Promise<boolean> {
   // ユーザーの所属部署を取得
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     include: {
-      userDepartments: {
+      user_departments: {
         where: { expiredDate: null },
         select: { departmentId: true }
       }
     }
   });
 
-  if (!user || user.userDepartments.length === 0) {
+  if (!user || user.user_departments.length === 0) {
     return false;
   }
 
-  const departmentIds = user.userDepartments.map(ud => ud.departmentId);
+  const departmentIds = user.user_departments.map(ud => ud.departmentId);
 
   // 機能を取得
-  const feature = await prisma.feature.findUnique({
+  const feature = await prisma.features.findUnique({
     where: { code: featureCode }
   });
 
@@ -662,7 +662,7 @@ async function checkUserPermission(userId: number, featureCode: string, action: 
   }
 
   // 部署の権限を確認
-  const permissions = await prisma.departmentFeaturePermission.findMany({
+  const permissions = await prisma.department_feature_permissions.findMany({
     where: {
       departmentId: { in: departmentIds },
       featureId: feature.id
@@ -701,15 +701,15 @@ router.get('/templates', async (req: Request, res: Response) => {
       });
     }
 
-    const templates = await prisma.permissionTemplate.findMany({
+    const templates = await prisma.permission_templates.findMany({
       where: {
         companyId: parseInt(companyId as string),
         isActive: true
       },
       include: {
-        templateFeatures: {
+        permission_template_features: {
           include: {
-            feature: {
+            features: {
               select: { id: true, code: true, name: true, category: true }
             }
           }
@@ -725,11 +725,11 @@ router.get('/templates', async (req: Request, res: Response) => {
       category: template.category,
       isPreset: template.isPreset,
       displayOrder: template.displayOrder,
-      features: template.templateFeatures.map(tf => ({
-        featureId: tf.feature.id,
-        featureCode: tf.feature.code,
-        featureName: tf.feature.name,
-        featureCategory: tf.feature.category,
+      features: template.permission_template_features.map(tf => ({
+        featureId: tf.features.id,
+        featureCode: tf.features.code,
+        featureName: tf.features.name,
+        featureCategory: tf.features.category,
         permissions: {
           canView: tf.canView,
           canCreate: tf.canCreate,
@@ -787,7 +787,7 @@ router.post('/templates', async (req: Request, res: Response) => {
     }
 
     // 会社の存在確認
-    const company = await prisma.company.findUnique({
+    const company = await prisma.companies.findUnique({
       where: { id: companyId }
     });
 
@@ -802,7 +802,7 @@ router.post('/templates', async (req: Request, res: Response) => {
     }
 
     // テンプレート名の重複チェック
-    const existingTemplate = await prisma.permissionTemplate.findFirst({
+    const existingTemplate = await prisma.permission_templates.findFirst({
       where: {
         companyId,
         name,
@@ -821,7 +821,7 @@ router.post('/templates', async (req: Request, res: Response) => {
     }
 
     // 表示順序を取得
-    const maxOrder = await prisma.permissionTemplate.aggregate({
+    const maxOrder = await prisma.permission_templates.aggregate({
       where: { companyId },
       _max: { displayOrder: true }
     });
@@ -831,7 +831,7 @@ router.post('/templates', async (req: Request, res: Response) => {
     // トランザクション内でテンプレートと機能権限を作成
     const template = await prisma.$transaction(async (tx) => {
       // テンプレート作成
-      const newTemplate = await tx.permissionTemplate.create({
+      const newTemplate = await tx.permission_templates.create({
         data: {
           companyId,
           name,
@@ -840,14 +840,15 @@ router.post('/templates', async (req: Request, res: Response) => {
           isPreset: false,
           displayOrder,
           createdBy: userId,
-          updatedBy: userId
+          updatedBy: userId,
+          updatedAt: new Date()
         }
       });
 
       // 機能権限を作成
-      const templateFeatures = await Promise.all(
+      const permission_template_features = await Promise.all(
         features.map(feature =>
-          tx.permissionTemplateFeature.create({
+          tx.permission_template_features.create({
             data: {
               templateId: newTemplate.id,
               featureId: feature.featureId,
@@ -862,7 +863,7 @@ router.post('/templates', async (req: Request, res: Response) => {
         )
       );
 
-      return { ...newTemplate, templateFeatures };
+      return { ...newTemplate, permission_template_features };
     });
 
     res.status(201).json({
@@ -910,10 +911,10 @@ router.post('/templates/:templateId/apply', async (req: Request, res: Response) 
     }
 
     // テンプレートを取得
-    const template = await prisma.permissionTemplate.findUnique({
+    const template = await prisma.permission_templates.findUnique({
       where: { id: templateId },
       include: {
-        templateFeatures: true
+        permission_template_features: true
       }
     });
 
@@ -928,7 +929,7 @@ router.post('/templates/:templateId/apply', async (req: Request, res: Response) 
     }
 
     // 部署の存在確認
-    const departments = await prisma.department.findMany({
+    const departments = await prisma.departments.findMany({
       where: {
         id: { in: departmentIds },
         isActive: true
@@ -950,9 +951,9 @@ router.post('/templates/:templateId/apply', async (req: Request, res: Response) 
       const appliedResults = [];
 
       for (const departmentId of departmentIds) {
-        for (const templateFeature of template.templateFeatures) {
+        for (const templateFeature of template.permission_template_features) {
           // 既存の権限設定を取得
-          const existingPermission = await tx.departmentFeaturePermission.findUnique({
+          const existingPermission = await tx.department_feature_permissions.findUnique({
             where: {
               departmentId_featureId: {
                 departmentId,
@@ -974,7 +975,7 @@ router.post('/templates/:templateId/apply', async (req: Request, res: Response) 
 
           if (existingPermission) {
             // 更新
-            await tx.departmentFeaturePermission.update({
+            await tx.department_feature_permissions.update({
               where: {
                 departmentId_featureId: {
                   departmentId,
@@ -985,7 +986,7 @@ router.post('/templates/:templateId/apply', async (req: Request, res: Response) 
             });
 
             // 監査ログを記録
-            await tx.auditLog.create({
+            await tx.audit_logs.create({
               data: {
                 userId,
                 action: 'TEMPLATE_APPLY',
@@ -1013,7 +1014,7 @@ router.post('/templates/:templateId/apply', async (req: Request, res: Response) 
             });
           } else {
             // 新規作成
-            await tx.departmentFeaturePermission.create({
+            await tx.department_feature_permissions.create({
               data: {
                 departmentId,
                 featureId: templateFeature.featureId,
@@ -1023,7 +1024,7 @@ router.post('/templates/:templateId/apply', async (req: Request, res: Response) 
             });
 
             // 監査ログを記録
-            await tx.auditLog.create({
+            await tx.audit_logs.create({
               data: {
                 userId,
                 action: 'TEMPLATE_APPLY',
@@ -1076,6 +1077,109 @@ router.post('/templates/:templateId/apply', async (req: Request, res: Response) 
 });
 
 /**
+ * 権限テンプレート更新
+ * PUT /api/permissions/templates/:templateId
+ */
+router.put('/templates/:templateId', async (req: Request, res: Response) => {
+  try {
+    const templateId = parseInt(req.params.templateId);
+    const { name, description, category, features } = req.body;
+    const userId = (req as any).user.id;
+
+    // テンプレートの存在確認
+    const template = await prisma.permission_templates.findUnique({
+      where: { id: templateId }
+    });
+
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: '指定されたテンプレートが見つかりません'
+        }
+      });
+    }
+
+    // プリセットテンプレートは編集不可
+    if (template.isPreset) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'プリセットテンプレートは編集できません'
+        }
+      });
+    }
+
+    // トランザクション内で更新
+    const updatedTemplate = await prisma.$transaction(async (tx) => {
+      // テンプレート情報を更新
+      const updated = await tx.permission_templates.update({
+        where: { id: templateId },
+        data: {
+          name: name || template.name,
+          description: description !== undefined ? description : template.description,
+          category: category || template.category,
+          updatedBy: userId,
+          updatedAt: new Date()
+        }
+      });
+
+      // 権限設定を更新する場合
+      if (features && Array.isArray(features)) {
+        // 既存の権限設定を削除
+        await tx.permission_template_features.deleteMany({
+          where: { templateId }
+        });
+
+        // 新しい権限設定を作成
+        await Promise.all(
+          features.map(feature =>
+            tx.permission_template_features.create({
+              data: {
+                templateId,
+                featureId: feature.featureId,
+                canView: feature.canView || false,
+                canCreate: feature.canCreate || false,
+                canEdit: feature.canEdit || false,
+                canDelete: feature.canDelete || false,
+                canApprove: feature.canApprove || false,
+                canExport: feature.canExport || false
+              }
+            })
+          )
+        );
+      }
+
+      return updated;
+    });
+
+    res.json({
+      success: true,
+      data: {
+        id: updatedTemplate.id,
+        name: updatedTemplate.name,
+        message: 'テンプレートを更新しました'
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        requestId: req.headers['x-request-id']
+      }
+    });
+  } catch (error) {
+    console.error('Error updating permission template:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'サーバー内部エラーが発生しました'
+      }
+    });
+  }
+});
+
+/**
  * 権限テンプレート削除
  * DELETE /api/permissions/templates/:templateId
  */
@@ -1085,7 +1189,7 @@ router.delete('/templates/:templateId', async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
 
     // テンプレートを取得
-    const template = await prisma.permissionTemplate.findUnique({
+    const template = await prisma.permission_templates.findUnique({
       where: { id: templateId }
     });
 
@@ -1111,7 +1215,7 @@ router.delete('/templates/:templateId', async (req: Request, res: Response) => {
     }
 
     // 論理削除
-    await prisma.permissionTemplate.update({
+    await prisma.permission_templates.update({
       where: { id: templateId },
       data: {
         isActive: false,

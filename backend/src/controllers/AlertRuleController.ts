@@ -4,13 +4,11 @@
  */
 
 import { Request, Response } from 'express'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '../lib/prisma'
 
 export class AlertRuleController {
-  private prisma: PrismaClient
-
   constructor() {
-    this.prisma = new PrismaClient()
+    // Prismaシングルトンを使用
   }
 
   /**
@@ -19,6 +17,8 @@ export class AlertRuleController {
    */
   async getAlertRules(req: Request, res: Response) {
     try {
+      console.log('[AlertRule] アラートルール取得開始', { query: req.query });
+
       const { page = 1, pageSize = 20, isEnabled } = req.query
 
       const where: any = {}
@@ -26,18 +26,24 @@ export class AlertRuleController {
         where.isEnabled = isEnabled === 'true'
       }
 
+      console.log('[AlertRule] クエリ条件', { where, page, pageSize });
+
       const skip = (Number(page) - 1) * Number(pageSize)
       const take = Number(pageSize)
 
+      console.log('[AlertRule] Prismaクエリ実行前', { skip, take });
+
       const [rules, total] = await Promise.all([
-        this.prisma.alertRule.findMany({
+        prisma.alert_rules.findMany({
           where,
           orderBy: { createdAt: 'desc' },
           skip,
           take
         }),
-        this.prisma.alertRule.count({ where })
+        prisma.alert_rules.count({ where })
       ])
+
+      console.log('[AlertRule] データ取得完了', { count: rules.length, total });
 
       res.json({
         rules,
@@ -63,7 +69,7 @@ export class AlertRuleController {
     try {
       const { id } = req.params
 
-      const rule = await this.prisma.alertRule.findUnique({
+      const rule = await prisma.alert_rules.findUnique({
         where: { id: Number(id) }
       })
 
@@ -119,7 +125,7 @@ export class AlertRuleController {
         })
       }
 
-      const rule = await this.prisma.alertRule.create({
+      const rule = await prisma.alert_rules.create({
         data: {
           name: name.trim(),
           description: description?.trim(),
@@ -170,7 +176,7 @@ export class AlertRuleController {
       } = req.body
 
       // 存在チェック
-      const existingRule = await this.prisma.alertRule.findUnique({
+      const existingRule = await prisma.alert_rules.findUnique({
         where: { id: Number(id) }
       })
 
@@ -215,7 +221,7 @@ export class AlertRuleController {
       if (notificationChannels !== undefined) updateData.notificationChannels = notificationChannels
       if (isEnabled !== undefined) updateData.isEnabled = isEnabled
 
-      const rule = await this.prisma.alertRule.update({
+      const rule = await prisma.alert_rules.update({
         where: { id: Number(id) },
         data: updateData
       })
@@ -244,7 +250,7 @@ export class AlertRuleController {
       const { id } = req.params
 
       // 存在チェック
-      const existingRule = await this.prisma.alertRule.findUnique({
+      const existingRule = await prisma.alert_rules.findUnique({
         where: { id: Number(id) }
       })
 
@@ -255,7 +261,7 @@ export class AlertRuleController {
         })
       }
 
-      await this.prisma.alertRule.delete({
+      await prisma.alert_rules.delete({
         where: { id: Number(id) }
       })
 
@@ -282,7 +288,7 @@ export class AlertRuleController {
       const { id } = req.params
 
       // 存在チェック
-      const existingRule = await this.prisma.alertRule.findUnique({
+      const existingRule = await prisma.alert_rules.findUnique({
         where: { id: Number(id) }
       })
 
@@ -293,7 +299,7 @@ export class AlertRuleController {
         })
       }
 
-      const rule = await this.prisma.alertRule.update({
+      const rule = await prisma.alert_rules.update({
         where: { id: Number(id) },
         data: {
           isEnabled: !existingRule.isEnabled,
@@ -324,7 +330,7 @@ export class AlertRuleController {
     try {
       const { id } = req.params
 
-      const rule = await this.prisma.alertRule.findUnique({
+      const rule = await prisma.alert_rules.findUnique({
         where: { id: Number(id) }
       })
 
@@ -348,7 +354,7 @@ export class AlertRuleController {
         where.message = { contains: rule.messagePattern, mode: 'insensitive' }
       }
 
-      const matchingLogs = await this.prisma.log.count({ where })
+      const matchingLogs = await prisma.logs.count({ where })
 
       const wouldTrigger = matchingLogs >= rule.thresholdCount
 

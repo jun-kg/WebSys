@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
-const prisma = new PrismaClient();
+// Prismaシングルトンを使用
 
 // 認証ミドルウェアを適用
 router.use(authMiddleware);
@@ -24,13 +24,13 @@ router.get('/', async (req: Request, res: Response) => {
     if (isMenuItem !== undefined) where.isMenuItem = isMenuItem === 'true';
     if (isActive !== undefined) where.isActive = isActive === 'true';
 
-    const features = await prisma.feature.findMany({
+    const features = await prisma.features.findMany({
       where,
       include: {
-        parent: {
+        features: {
           select: { id: true, name: true, code: true }
         },
-        children: {
+        other_features: {
           select: { id: true, name: true, code: true }
         }
       },
@@ -63,6 +63,47 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 /**
+ * 機能カテゴリ一覧取得
+ * GET /api/features/categories
+ */
+router.get('/categories', async (req: Request, res: Response) => {
+  try {
+    const categoriesRaw = await prisma.features.groupBy({
+      by: ['category'],
+      _count: true,
+      where: {
+        isActive: true
+      }
+    });
+
+    const categories = categoriesRaw.map(cat => ({
+      category: cat.category,
+      count: cat._count
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        categories
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        requestId: req.headers['x-request-id']
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'サーバー内部エラーが発生しました'
+      }
+    });
+  }
+});
+
+/**
  * 機能詳細取得
  * GET /api/features/:id
  */
@@ -70,18 +111,22 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const featureId = parseInt(req.params.id);
 
-    const feature = await prisma.feature.findUnique({
+    if (isNaN(featureId)) {
+      return res.status(400).json({ error: 'Invalid feature ID' });
+    }
+
+    const feature = await prisma.features.findUnique({
       where: { id: featureId },
       include: {
-        parent: {
+        features: {
           select: { id: true, name: true, code: true }
         },
-        children: {
+        other_features: {
           select: { id: true, name: true, code: true, isActive: true }
         },
-        departmentFeaturePermissions: {
+        department_feature_permissions: {
           include: {
-            department: {
+            departments: {
               select: { id: true, name: true }
             }
           }
@@ -119,50 +164,6 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * 機能カテゴリ一覧取得
- * GET /api/features/categories
- */
-router.get('/categories', async (req: Request, res: Response) => {
-  try {
-    const categoriesRaw = await prisma.feature.groupBy({
-      by: ['category'],
-      _count: {
-        id: true
-      },
-      where: {
-        isActive: true
-      }
-    });
-
-    const categories = categoriesRaw.map(cat => ({
-      code: cat.category,
-      name: getCategoryDisplayName(cat.category),
-      description: getCategoryDescription(cat.category),
-      featureCount: cat._count.id
-    }));
-
-    res.json({
-      success: true,
-      data: {
-        categories
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-        requestId: req.headers['x-request-id']
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching categories:', error);
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'サーバー内部エラーが発生しました'
-      }
-    });
-  }
-});
 
 /**
  * 機能登録
@@ -195,7 +196,7 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     // 重複チェック
-    const existingFeature = await prisma.feature.findUnique({
+    const existingFeature = await prisma.features.findUnique({
       where: { code }
     });
 
@@ -212,7 +213,7 @@ router.post('/', async (req: Request, res: Response) => {
     // パス生成
     let path = '';
     if (parentId) {
-      const parent = await prisma.feature.findUnique({
+      const parent = await prisma.features.findUnique({
         where: { id: parentId },
         select: { path: true }
       });
@@ -223,7 +224,7 @@ router.post('/', async (req: Request, res: Response) => {
       path = '/{{id}}';
     }
 
-    const feature = await prisma.feature.create({
+    const feature = await prisma.features.create({
       data: {
         code,
         name,
@@ -235,10 +236,11 @@ router.post('/', async (req: Request, res: Response) => {
         apiPattern,
         icon,
         displayOrder: displayOrder ?? 0,
-        isMenuItem: isMenuItem ?? true
+        isMenuItem: isMenuItem ?? true,
+        updatedAt: new Date()
       },
       include: {
-        parent: {
+        other_features: {
           select: { id: true, name: true, code: true }
         }
       }
@@ -246,7 +248,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     // パスの実際のIDで更新
     const finalPath = path.replace('{{id}}', feature.id.toString());
-    await prisma.feature.update({
+    await prisma.features.update({
       where: { id: feature.id },
       data: { path: finalPath }
     });
@@ -294,7 +296,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       isActive
     } = req.body;
 
-    const existingFeature = await prisma.feature.findUnique({
+    const existingFeature = await prisma.features.findUnique({
       where: { id: featureId }
     });
 
@@ -308,7 +310,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       });
     }
 
-    const feature = await prisma.feature.update({
+    const feature = await prisma.features.update({
       where: { id: featureId },
       data: {
         name,
@@ -323,10 +325,10 @@ router.put('/:id', async (req: Request, res: Response) => {
         isActive
       },
       include: {
-        parent: {
+        features: {
           select: { id: true, name: true, code: true }
         },
-        children: {
+        other_features: {
           select: { id: true, name: true, code: true }
         }
       }
@@ -360,10 +362,10 @@ router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const featureId = parseInt(req.params.id);
 
-    const existingFeature = await prisma.feature.findUnique({
+    const existingFeature = await prisma.features.findUnique({
       where: { id: featureId },
       include: {
-        children: true
+        other_features: true
       }
     });
 
@@ -378,7 +380,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
     }
 
     // 子機能がある場合は削除を拒否
-    if (existingFeature.children.length > 0) {
+    if (existingFeature.other_features.length > 0) {
       return res.status(400).json({
         success: false,
         error: {
@@ -388,7 +390,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
       });
     }
 
-    await prisma.feature.update({
+    await prisma.features.update({
       where: { id: featureId },
       data: { isActive: false }
     });
@@ -414,32 +416,5 @@ router.delete('/:id', async (req: Request, res: Response) => {
     });
   }
 });
-
-// ヘルパー関数
-function getCategoryDisplayName(category: string): string {
-  const categoryNames: Record<string, string> = {
-    'SYSTEM': 'システム管理',
-    'USER_MGMT': 'ユーザー管理',
-    'LOG_MGMT': 'ログ管理',
-    'FEATURE_MGMT': '機能管理',
-    'REPORT': 'レポート',
-    'DASHBOARD': 'ダッシュボード',
-    'CUSTOM': 'カスタム'
-  };
-  return categoryNames[category] || category;
-}
-
-function getCategoryDescription(category: string): string {
-  const categoryDescriptions: Record<string, string> = {
-    'SYSTEM': 'システム全体の管理機能',
-    'USER_MGMT': 'ユーザー関連の管理機能',
-    'LOG_MGMT': 'ログ監視・分析機能',
-    'FEATURE_MGMT': '機能・権限管理',
-    'REPORT': 'レポート・分析機能',
-    'DASHBOARD': 'ダッシュボード機能',
-    'CUSTOM': 'カスタム機能'
-  };
-  return categoryDescriptions[category] || '機能カテゴリ';
-}
 
 export default router;

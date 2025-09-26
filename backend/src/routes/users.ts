@@ -1,11 +1,10 @@
 import { Router } from 'express'
 import { body, validationResult } from 'express-validator'
 import bcrypt from 'bcryptjs'
-import { PrismaClient } from '@prisma/client'
 import { authMiddleware, requireAdmin } from '../middleware/auth'
+import { prisma } from '../lib/prisma'
 
 const router = Router()
-const prisma = new PrismaClient()
 
 // Get all users with pagination (protected)
 router.get('/', authMiddleware, async (req, res) => {
@@ -27,7 +26,7 @@ router.get('/', authMiddleware, async (req, res) => {
     } : {}
 
     const [users, total] = await Promise.all([
-      prisma.user.findMany({
+      prisma.users.findMany({
         where: whereClause,
         select: {
           id: true,
@@ -35,7 +34,7 @@ router.get('/', authMiddleware, async (req, res) => {
           email: true,
           name: true,
           companyId: true,
-          company: {
+          companies: {
             select: {
               id: true,
               name: true,
@@ -43,7 +42,7 @@ router.get('/', authMiddleware, async (req, res) => {
             }
           },
           primaryDepartmentId: true,
-          primaryDepartment: {
+          departments: {
             select: {
               id: true,
               name: true,
@@ -61,7 +60,7 @@ router.get('/', authMiddleware, async (req, res) => {
         skip,
         take: pageSize
       }),
-      prisma.user.count({ where: whereClause })
+      prisma.users.count({ where: whereClause })
     ])
 
     res.json({
@@ -93,7 +92,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params
 
   try {
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: parseInt(id) },
       select: {
         id: true,
@@ -222,7 +221,7 @@ router.post(
 
     try {
       // Check if user exists
-      const existingUser = await prisma.user.findFirst({
+      const existingUser = await prisma.users.findFirst({
         where: {
           OR: [{ username }, { email }]
         }
@@ -240,7 +239,7 @@ router.post(
 
       // Validate company and department if provided
       if (companyId) {
-        const company = await prisma.company.findUnique({
+        const company = await prisma.companies.findUnique({
           where: { id: companyId }
         })
         if (!company) {
@@ -255,7 +254,7 @@ router.post(
       }
 
       if (primaryDepartmentId) {
-        const department = await prisma.department.findUnique({
+        const department = await prisma.departments.findUnique({
           where: { id: primaryDepartmentId }
         })
         if (!department) {
@@ -273,7 +272,7 @@ router.post(
       const hashedPassword = await bcrypt.hash(password, 12)
 
       // Create user
-      const user = await prisma.user.create({
+      const user = await prisma.users.create({
         data: {
           username,
           email,
@@ -408,7 +407,7 @@ router.put(
 
     try {
       // Check if user exists
-      const existingUser = await prisma.user.findUnique({
+      const existingUser = await prisma.users.findUnique({
         where: { id: parseInt(id) }
       })
 
@@ -424,7 +423,7 @@ router.put(
 
       // Check for duplicate username/email if updating
       if (username || email) {
-        const duplicateUser = await prisma.user.findFirst({
+        const duplicateUser = await prisma.users.findFirst({
           where: {
             AND: [
               { id: { not: parseInt(id) } },
@@ -468,7 +467,7 @@ router.put(
       }
 
       // Update user
-      const user = await prisma.user.update({
+      const user = await prisma.users.update({
         where: { id: parseInt(id) },
         data: updateData,
         select: {
@@ -526,7 +525,7 @@ router.delete('/:id', authMiddleware, requireAdmin, async (req, res) => {
 
   try {
     // Check if user exists
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await prisma.users.findUnique({
       where: { id: parseInt(id) }
     })
 
@@ -541,7 +540,7 @@ router.delete('/:id', authMiddleware, requireAdmin, async (req, res) => {
     }
 
     // Soft delete by setting isActive to false instead of hard delete
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: parseInt(id) },
       data: {
         isActive: false,
@@ -569,7 +568,7 @@ router.delete('/:id', authMiddleware, requireAdmin, async (req, res) => {
 router.get('/form-data/companies-departments', authMiddleware, async (req, res) => {
   try {
     const [companies, departments] = await Promise.all([
-      prisma.company.findMany({
+      prisma.companies.findMany({
         where: { isActive: true },
         select: {
           id: true,
@@ -578,7 +577,7 @@ router.get('/form-data/companies-departments', authMiddleware, async (req, res) 
         },
         orderBy: { name: 'asc' }
       }),
-      prisma.department.findMany({
+      prisma.departments.findMany({
         where: { isActive: true },
         select: {
           id: true,

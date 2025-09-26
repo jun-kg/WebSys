@@ -148,7 +148,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { Plus, Search, Refresh, Edit, Delete } from '@element-plus/icons-vue'
-import { departmentsApi, type Department } from '@/api/departments'
+import { departmentAPI as departmentsApi, type Department } from '@/api/departments'
 import { companiesApi, type Company } from '@/api/companies'
 
 const loading = ref(false)
@@ -205,6 +205,13 @@ const fetchCompanies = async () => {
 // 部署一覧の取得
 const fetchDepartments = async () => {
   try {
+    // companyIdが設定されていない場合は何もしない
+    if (!searchForm.companyId) {
+      tableData.value = []
+      total.value = 0
+      return
+    }
+
     loading.value = true
     const params = {
       page: currentPage.value,
@@ -370,10 +377,12 @@ const handleCurrentChange = (val: number) => {
 
 // 初期化
 onMounted(async () => {
-  await Promise.all([
-    fetchCompanies(),
-    fetchDepartments()
-  ])
+  await fetchCompanies()
+  // 最初の会社が選択された状態で部署を取得
+  if (companies.value.length > 0) {
+    searchForm.companyId = companies.value[0].id
+    await fetchDepartments()
+  }
 })
 </script>
 

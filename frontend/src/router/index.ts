@@ -46,6 +46,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '権限マトリクス' }
       },
       {
+        path: 'permission-template',
+        name: 'PermissionTemplate',
+        component: () => import('@/views/PermissionTemplate.vue'),
+        meta: { title: '権限テンプレート' }
+      },
+      {
         path: 'code-preview-demo',
         name: 'CodePreviewDemo',
         component: () => import('@/views/CodePreviewDemo.vue'),
@@ -74,6 +80,12 @@ const routes: RouteRecordRaw[] = [
         name: 'NotificationSettings',
         component: () => import('@/views/NotificationSettings.vue'),
         meta: { title: '通知設定' }
+      },
+      {
+        path: 'permission-inheritance',
+        name: 'PermissionInheritance',
+        component: () => import('@/views/PermissionInheritance.vue'),
+        meta: { title: '権限継承管理' }
       }
     ]
   },

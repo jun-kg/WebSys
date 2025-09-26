@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
 interface ClientInfo {
   ipAddress: string;
@@ -6,10 +6,8 @@ interface ClientInfo {
 }
 
 export class AuditService {
-  private prisma: PrismaClient;
-
   constructor() {
-    this.prisma = new PrismaClient();
+    // Prismaシングルトンを使用
   }
 
   async logLoginAttempt(
@@ -25,7 +23,7 @@ export class AuditService {
         userId = parseInt(userIdentifier);
       }
 
-      await this.prisma.auditLog.create({
+      await prisma.audit_logs.create({
         data: {
           userId: userId || 1, // 仮のユーザーID（実際は適切なユーザーIDを設定）
           action: success ? 'LOGIN_SUCCESS' : 'LOGIN_FAILED',
@@ -44,7 +42,7 @@ export class AuditService {
 
   async logPasswordChange(userId: number, clientInfo: ClientInfo): Promise<void> {
     try {
-      await this.prisma.auditLog.create({
+      await prisma.audit_logs.create({
         data: {
           userId,
           action: 'PASSWORD_CHANGE',
@@ -66,7 +64,7 @@ export class AuditService {
     sessionId: number
   ): Promise<void> {
     try {
-      await this.prisma.auditLog.create({
+      await prisma.audit_logs.create({
         data: {
           userId,
           action: `SESSION_${action}`,
@@ -91,7 +89,7 @@ export class AuditService {
     clientInfo?: ClientInfo
   ): Promise<void> {
     try {
-      await this.prisma.auditLog.create({
+      await prisma.audit_logs.create({
         data: {
           userId,
           action: 'PERMISSION_CHANGE',
