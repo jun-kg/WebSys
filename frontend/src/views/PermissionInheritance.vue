@@ -225,12 +225,14 @@
     <el-dialog
       v-model="visualizationDialog"
       title="権限継承関係の可視化"
-      width="90%"
-      top="5vh"
+      width="95%"
+      top="2vh"
+      custom-class="visualization-dialog"
     >
-      <div class="visualization-container">
-        <div id="inheritance-chart" style="width: 100%; height: 600px;"></div>
-      </div>
+      <InheritanceVisualization
+        :initial-company-id="1"
+        :initial-feature-id="selectedDepartment ? features.find(f => f.id)?.id : undefined"
+      />
     </el-dialog>
   </div>
 </template>
@@ -240,6 +242,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { View, Folder, Menu, Refresh } from '@element-plus/icons-vue'
 import api from '@/api'
+import InheritanceVisualization from '@/components/InheritanceVisualization.vue'
 
 interface Department {
   id: number
@@ -495,9 +498,6 @@ const getDepartmentName = (departmentId: number): string => {
 
 const showVisualization = async () => {
   visualizationDialog.value = true
-
-  // TODO: Implement tree visualization using D3.js or similar
-  // This would show the inheritance hierarchy visually
 }
 
 // Lifecycle
@@ -585,5 +585,13 @@ onMounted(async () => {
   width: 100%;
   height: 600px;
   overflow: auto;
+}
+
+:deep(.visualization-dialog) {
+  .el-dialog__body {
+    padding: 0;
+    height: 85vh;
+    overflow: hidden;
+  }
 }
 </style>

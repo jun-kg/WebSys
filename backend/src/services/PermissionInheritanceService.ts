@@ -363,16 +363,271 @@ export class PermissionInheritanceService {
         const effectivePermissions = await this.calculateEffectivePermissions(dept.id);
         dept['effectivePermissions'] = effectivePermissions;
         dept['inheritanceRules'] = await this.getInheritanceRules(dept.id);
+
+        // 追加の可視化データ
+        dept['inheritanceFlow'] = await this.calculateInheritanceFlow(dept.id);
+        dept['permissionConflicts'] = await this.detectPermissionConflicts(dept.id);
       }
+
+      // 継承関係のマッピング
+      const inheritanceMap = await this.buildInheritanceMap(departments);
 
       return {
         tree,
-        departments
+        departments,
+        inheritanceMap,
+        statistics: await this.getInheritanceStatistics(companyId)
       };
     } catch (error) {
       console.error('Error getting inheritance visualization:', error);
       throw error;
     }
+  }
+
+  /**
+   * 部署の継承フローを計算
+   */
+  private async calculateInheritanceFlow(departmentId: number): Promise<any[]> {
+    const flows = [];
+    const parentChain = await this.buildParentChain(departmentId);
+
+    for (const parentId of parentChain) {
+      const parentPermissions = await prisma.department_feature_permissions.findMany({
+        where: { departmentId: parentId },
+        include: { features: true }
+      });
+
+      for (const permission of parentPermissions) {
+        const inheritanceRule = await prisma.permission_inheritance_rules.findUnique({
+          where: {
+            departmentId_featureId: {
+              departmentId,
+              featureId: permission.featureId
+            }
+          }
+        });
+
+        if (inheritanceRule && inheritanceRule.inheritType !== 'NONE') {
+          flows.push({
+            sourceId: parentId,
+            targetId: departmentId,
+            featureId: permission.featureId,
+            featureName: permission.features.name,
+            inheritType: inheritanceRule.inheritType,
+            permissions: {
+              canView: inheritanceRule.inheritType === 'ALL' ? permission.canView : inheritanceRule.inheritView && permission.canView,
+              canCreate: inheritanceRule.inheritType === 'ALL' ? permission.canCreate : inheritanceRule.inheritCreate && permission.canCreate,
+              canEdit: inheritanceRule.inheritType === 'ALL' ? permission.canEdit : inheritanceRule.inheritEdit && permission.canEdit,
+              canDelete: inheritanceRule.inheritType === 'ALL' ? permission.canDelete : inheritanceRule.inheritDelete && permission.canDelete,
+              canApprove: inheritanceRule.inheritType === 'ALL' ? permission.canApprove : inheritanceRule.inheritApprove && permission.canApprove,
+              canExport: inheritanceRule.inheritType === 'ALL' ? permission.canExport : inheritanceRule.inheritExport && permission.canExport
+            }
+          });
+        }
+      }
+    }
+
+    return flows;
+  }
+
+  /**
+   * 権限競合を検出
+   */
+  private async detectPermissionConflicts(departmentId: number): Promise<any[]> {
+    const conflicts = [];
+    const features = await prisma.features.findMany({
+      where: { isActive: true }
+    });
+
+    for (const feature of features) {
+      const directPermission = await prisma.department_feature_permissions.findUnique({
+        where: {
+          departmentId_featureId: {
+            departmentId,
+            featureId: feature.id
+          }
+        }
+      });
+
+      const inheritedPermissions = await this.getInheritedPermissionsForFeature(departmentId, feature.id);
+
+      if (directPermission && inheritedPermissions.length > 0) {
+        const hasConflict = this.checkPermissionConflict(directPermission, inheritedPermissions);
+
+        if (hasConflict) {
+          conflicts.push({
+            featureId: feature.id,
+            featureName: feature.name,
+            directPermission,
+            inheritedPermissions,
+            conflictType: this.analyzeConflictType(directPermission, inheritedPermissions)
+          });
+        }
+      }
+    }
+
+    return conflicts;
+  }
+
+  /**
+   * 特定機能の継承権限を取得
+   */
+  private async getInheritedPermissionsForFeature(departmentId: number, featureId: number): Promise<any[]> {
+    const inheritedPermissions = [];
+    const parentChain = await this.buildParentChain(departmentId);
+
+    for (const parentId of parentChain) {
+      const parentPermission = await prisma.department_feature_permissions.findUnique({
+        where: {
+          departmentId_featureId: {
+            departmentId: parentId,
+            featureId
+          }
+        },
+        include: {
+          departments: true
+        }
+      });
+
+      if (parentPermission) {
+        inheritedPermissions.push({
+          ...parentPermission,
+          sourceDepartmentName: parentPermission.departments.name
+        });
+      }
+    }
+
+    return inheritedPermissions;
+  }
+
+  /**
+   * 権限競合をチェック
+   */
+  private checkPermissionConflict(direct: any, inherited: any[]): boolean {
+    // 直接権限と継承権限で異なる値がある場合は競合
+    for (const inh of inherited) {
+      if (direct.canView !== inh.canView ||
+          direct.canCreate !== inh.canCreate ||
+          direct.canEdit !== inh.canEdit ||
+          direct.canDelete !== inh.canDelete ||
+          direct.canApprove !== inh.canApprove ||
+          direct.canExport !== inh.canExport) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * 競合タイプを分析
+   */
+  private analyzeConflictType(direct: any, inherited: any[]): string {
+    const directTotal = this.countPermissions(direct);
+    const inheritedTotal = inherited.reduce((sum, inh) => sum + this.countPermissions(inh), 0);
+
+    if (directTotal > inheritedTotal) return 'PERMISSION_ESCALATION';
+    if (directTotal < inheritedTotal) return 'PERMISSION_RESTRICTION';
+    return 'PERMISSION_DIFFERENCE';
+  }
+
+  /**
+   * 権限数をカウント
+   */
+  private countPermissions(permission: any): number {
+    return [
+      permission.canView,
+      permission.canCreate,
+      permission.canEdit,
+      permission.canDelete,
+      permission.canApprove,
+      permission.canExport
+    ].filter(Boolean).length;
+  }
+
+  /**
+   * 継承マップを構築
+   */
+  private async buildInheritanceMap(departments: any[]): Promise<any> {
+    const map = {
+      nodes: [],
+      links: []
+    };
+
+    // ノードを作成
+    for (const dept of departments) {
+      map.nodes.push({
+        id: dept.id,
+        name: dept.name,
+        level: dept.level,
+        permissionCount: dept.department_feature_permissions.length,
+        inheritanceRuleCount: dept.inheritanceRules?.length || 0
+      });
+    }
+
+    // 継承リンクを作成
+    for (const dept of departments) {
+      if (dept.parentId) {
+        const inheritanceFlows = dept.inheritanceFlow || [];
+
+        for (const flow of inheritanceFlows) {
+          map.links.push({
+            source: flow.sourceId,
+            target: flow.targetId,
+            featureId: flow.featureId,
+            featureName: flow.featureName,
+            inheritType: flow.inheritType,
+            strength: this.calculateInheritanceStrength(flow.permissions)
+          });
+        }
+      }
+    }
+
+    return map;
+  }
+
+  /**
+   * 継承強度を計算
+   */
+  private calculateInheritanceStrength(permissions: any): number {
+    const permissionCount = Object.values(permissions).filter(Boolean).length;
+    return permissionCount / 6; // 0-1の範囲で正規化
+  }
+
+  /**
+   * 継承統計を取得
+   */
+  private async getInheritanceStatistics(companyId: number): Promise<any> {
+    const departments = await prisma.departments.count({
+      where: { companyId, isActive: true }
+    });
+
+    const inheritanceRules = await prisma.permission_inheritance_rules.count({
+      where: {
+        departments: { companyId },
+        isActive: true
+      }
+    });
+
+    const rulesByType = await prisma.permission_inheritance_rules.groupBy({
+      by: ['inheritType'],
+      where: {
+        departments: { companyId },
+        isActive: true
+      },
+      _count: {
+        inheritType: true
+      }
+    });
+
+    return {
+      totalDepartments: departments,
+      totalInheritanceRules: inheritanceRules,
+      rulesByType: rulesByType.reduce((acc, rule) => {
+        acc[rule.inheritType] = rule._count.inheritType;
+        return acc;
+      }, {}),
+      averageRulesPerDepartment: departments > 0 ? (inheritanceRules / departments).toFixed(2) : 0
+    };
   }
 
   /**

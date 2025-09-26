@@ -66,6 +66,10 @@
           <el-icon><Message /></el-icon>
           <span>通知設定</span>
         </el-menu-item>
+        <el-menu-item index="/reports">
+          <el-icon><Document /></el-icon>
+          <span>レポート管理</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 

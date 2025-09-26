@@ -86,6 +86,12 @@ const routes: RouteRecordRaw[] = [
         name: 'PermissionInheritance',
         component: () => import('@/views/PermissionInheritance.vue'),
         meta: { title: '権限継承管理' }
+      },
+      {
+        path: 'reports',
+        name: 'Reports',
+        component: () => import('@/views/Reports.vue'),
+        meta: { title: 'レポート管理' }
       }
     ]
   },

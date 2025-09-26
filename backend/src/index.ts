@@ -14,6 +14,7 @@ import alertRuleRoutes from './routes/alertRules.js'
 import notificationRoutes from './routes/notifications.js'
 import statisticsRoutes from './routes/statistics.js'
 import permissionInheritanceRoutes from './routes/permissionInheritance.js'
+import reportRoutes from './routes/reports.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { initializeWebSocketService } from './services/WebSocketService.js'
 
@@ -62,6 +63,7 @@ app.use('/api/alert-rules', alertRuleRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/statistics', statisticsRoutes)
 app.use('/api/permissions', permissionInheritanceRoutes)
+app.use('/api/reports', reportRoutes)
 
 // WebSocket接続状況API
 app.get('/api/websocket/status', (req, res) => {

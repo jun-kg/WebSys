@@ -270,7 +270,9 @@ const handleSettings = () => {
 }
 
 const handleReports = () => {
-  ElMessage.info('レポート生成機能は準備中です')
+  import('@/router').then(({ default: router }) => {
+    router.push('/reports')
+  })
 }
 </script>
 

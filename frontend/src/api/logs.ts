@@ -27,7 +27,7 @@ export interface LogCollectionResponse {
  * ログ収集API (認証不要)
  */
 export const collectLogs = async (logs: Omit<LogEntry, 'id' | 'user'>[]): Promise<LogCollectionResponse> => {
-  const response = await api.post<LogCollectionResponse>('/api/logs', { logs })
+  const response = await api.post<LogCollectionResponse>('/logs', { logs })
   return response.data
 }
 
@@ -55,7 +55,7 @@ export const searchLogs = async (params: Partial<LogSearchParams>): Promise<LogS
     }
   })
 
-  const response = await api.get<LogSearchResult>(`/api/logs/search?${queryParams}`)
+  const response = await api.get<LogSearchResult>(`/logs/search?${queryParams}`)
   return response.data
 }
 
@@ -75,7 +75,7 @@ export const getStatistics = async (params: LogStatisticsParams): Promise<LogSta
     }
   })
 
-  const response = await api.get<LogStatisticsResult>(`/api/logs/statistics?${queryParams}`)
+  const response = await api.get<LogStatisticsResult>(`/logs/statistics?${queryParams}`)
   return response.data
 }
 
@@ -83,7 +83,7 @@ export const getStatistics = async (params: LogStatisticsParams): Promise<LogSta
  * リアルタイム統計取得API (認証必要)
  */
 export const getRealtimeStatistics = async (): Promise<RealtimeStatistics> => {
-  const response = await api.get<RealtimeStatistics>('/api/logs/realtime')
+  const response = await api.get<RealtimeStatistics>('/logs/realtime')
   return response.data
 }
 
@@ -91,7 +91,7 @@ export const getRealtimeStatistics = async (): Promise<RealtimeStatistics> => {
  * ログ詳細取得API (認証必要)
  */
 export const getLogDetail = async (id: string): Promise<{ success: boolean; log: LogEntry }> => {
-  const response = await api.get<{ success: boolean; log: LogEntry }>(`/api/logs/${id}`)
+  const response = await api.get<{ success: boolean; log: LogEntry }>(`/logs/${id}`)
   return response.data
 }
 
@@ -99,7 +99,7 @@ export const getLogDetail = async (id: string): Promise<{ success: boolean; log:
  * ログクリーンアップAPI (管理者のみ)
  */
 export const cleanupLogs = async (): Promise<{ success: boolean; message: string }> => {
-  const response = await api.post<{ success: boolean; message: string }>('/api/logs/cleanup')
+  const response = await api.post<{ success: boolean; message: string }>('/logs/cleanup')
   return response.data
 }
 
@@ -126,7 +126,7 @@ export const exportLogs = async (params: {
     }
   })
 
-  const response = await api.get(`/api/logs/export?${queryParams}`, {
+  const response = await api.get(`/logs/export?${queryParams}`, {
     responseType: 'blob'
   })
 

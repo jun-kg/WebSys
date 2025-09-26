@@ -33,18 +33,40 @@ export class LogService {
         // レベルを文字列に変換
         const logLevel = this.convertLevelToEnum(log.level)
 
+        // カテゴリIDを取得または作成
+        let categoryId: number | undefined = undefined
+        if (log.category) {
+          const category = await prisma.log_categories.upsert({
+            where: { code: log.category },
+            create: {
+              code: log.category,
+              name: log.category,
+              description: `Auto-created category: ${log.category}`,
+              isActive: true,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            },
+            update: {
+              updatedAt: new Date()
+            }
+          })
+          categoryId = category.id
+        }
+
         const savedLog = await prisma.logs.create({
           data: {
             timestamp: new Date(log.timestamp),
             level: logLevel,
             message: log.message,
             userId: log.userId,
+            categoryId: categoryId,
             source: log.source,
             environment: log.environment || 'development',
             context: log.details || log.error || log.performance || {}
           },
           include: {
-            users: true
+            users: true,
+            log_categories: true
           }
         })
         saved++
@@ -299,7 +321,7 @@ export class LogService {
    * ログエントリ検証
    */
   private validateLogEntry(log: LogEntry): boolean {
-    if (!log.timestamp || !log.level || !log.message || !log.source) {
+    if (!log.timestamp || !log.level || !log.message || !log.source || !log.category) {
       return false
     }
 
@@ -307,7 +329,12 @@ export class LogService {
       return false
     }
 
-    if (!['frontend', 'backend', 'database', 'infrastructure'].includes(log.source)) {
+    if (!['frontend', 'backend', 'database', 'infrastructure', 'test'].includes(log.source)) {
+      return false
+    }
+
+    // カテゴリは必須だが、値は制限しない（動的に追加される可能性があるため）
+    if (!log.category || typeof log.category !== 'string') {
       return false
     }
 
