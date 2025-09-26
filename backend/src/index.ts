@@ -15,8 +15,10 @@ import notificationRoutes from './routes/notifications.js'
 import statisticsRoutes from './routes/statistics.js'
 import permissionInheritanceRoutes from './routes/permissionInheritance.js'
 import reportRoutes from './routes/reports.js'
+import healthRoutes from './routes/health.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { initializeWebSocketService } from './services/WebSocketService.js'
+import { SystemHealthService } from './services/SystemHealthService.js'
 
 dotenv.config()
 
@@ -64,6 +66,7 @@ app.use('/api/notifications', notificationRoutes)
 app.use('/api/statistics', statisticsRoutes)
 app.use('/api/permissions', permissionInheritanceRoutes)
 app.use('/api/reports', reportRoutes)
+app.use('/api', healthRoutes)
 
 // WebSocket接続状況API
 app.get('/api/websocket/status', (req, res) => {
@@ -77,11 +80,20 @@ app.use(errorHandler)
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`)
   console.log(`WebSocket server is ready`)
+
+  // システムヘルス監視を開始
+  const healthService = SystemHealthService.getInstance()
+  healthService.startRealTimeMonitoring(30000) // 30秒間隔
 })
 
 // グレースフルシャットダウン
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully')
+
+  // ヘルス監視を停止
+  const healthService = SystemHealthService.getInstance()
+  healthService.stopRealTimeMonitoring()
+
   webSocketService.close()
   httpServer.close(() => {
     console.log('HTTP server closed')
@@ -91,6 +103,11 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   console.log('SIGINT received, shutting down gracefully')
+
+  // ヘルス監視を停止
+  const healthService = SystemHealthService.getInstance()
+  healthService.stopRealTimeMonitoring()
+
   webSocketService.close()
   httpServer.close(() => {
     console.log('HTTP server closed')

@@ -70,6 +70,10 @@
           <el-icon><Document /></el-icon>
           <span>レポート管理</span>
         </el-menu-item>
+        <el-menu-item index="/system-health">
+          <el-icon><CircleCheck /></el-icon>
+          <span>システム監視</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -110,7 +114,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { DataAnalysis, User, Document, ArrowDown, Monitor, Warning, Message, Lock } from '@element-plus/icons-vue'
+import { DataAnalysis, User, Document, ArrowDown, Monitor, Warning, Message, Lock, CircleCheck } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()

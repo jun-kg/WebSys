@@ -217,6 +217,35 @@ export class WebSocketService {
   }
 
   /**
+   * ヘルスメトリクスをリアルタイム配信
+   */
+  public broadcastHealthMetrics(healthData: any) {
+    this.io.to('system-health').emit('health-update', {
+      type: 'health-update',
+      data: healthData,
+      timestamp: Date.now()
+    })
+  }
+
+  /**
+   * システムアラートを配信（ヘルスチェック用）
+   */
+  public broadcastHealthAlert(alert: {
+    level: 'info' | 'warning' | 'error' | 'critical'
+    service: string
+    message: string
+    details?: any
+  }) {
+    this.io.to('system-health').emit('health-alert', {
+      type: 'health-alert',
+      data: alert,
+      timestamp: Date.now()
+    })
+
+    console.log(`Health Alert: [${alert.level.toUpperCase()}] ${alert.service} - ${alert.message}`)
+  }
+
+  /**
    * 特定ユーザーにメッセージ送信
    */
   public sendToUser(userId: number, event: string, data: any) {

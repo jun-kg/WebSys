@@ -92,6 +92,12 @@ const routes: RouteRecordRaw[] = [
         name: 'Reports',
         component: () => import('@/views/Reports.vue'),
         meta: { title: 'レポート管理' }
+      },
+      {
+        path: 'system-health',
+        name: 'SystemHealth',
+        component: () => import('@/views/SystemHealth.vue'),
+        meta: { title: 'システム監視' }
       }
     ]
   },
