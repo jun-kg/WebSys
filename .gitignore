@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # 開発用ワークスペース（独立したGitリポジトリ）
 workspace/
 
@@ -9,11 +8,6 @@ environments/
 **/postgres_data*/
 **/node_modules*/
 
-# 環境変数ファイル
-.env
-.env.*
-!.env.example
-=======
 # Dependencies
 node_modules/
 .pnp
@@ -21,8 +15,12 @@ node_modules/
 
 # Environment variables
 .env
+.env.*
+!.env.example
 .env.local
-.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Logs
 logs
@@ -31,7 +29,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
->>>>>>> edf5346 (feat: 完全なログ監視システム実装とエラーフィルタリング修正)
 
 # OS files
 .DS_Store
@@ -46,15 +43,6 @@ Thumbs.db
 *.sln
 *.sw?
 
-<<<<<<< HEAD
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-=======
 # Build outputs
 dist/
 build/
@@ -63,19 +51,17 @@ build/
 # Testing
 coverage/
 .nyc_output
->>>>>>> edf5346 (feat: 完全なログ監視システム実装とエラーフィルタリング修正)
 
 # Temporary files
 *.tmp
 *.temp
 .cache/
 
-<<<<<<< HEAD
 # Runtime files
 *.pid
 *.seed
 *.pid.lock
-=======
+
 # TypeScript
 *.tsbuildinfo
 frontend/src/auto-imports.d.ts
@@ -85,4 +71,3 @@ frontend/src/components.d.ts
 backend/prisma/*.db
 backend/prisma/*.db-journal
 backend/prisma/migrations/
->>>>>>> edf5346 (feat: 完全なログ監視システム実装とエラーフィルタリング修正)

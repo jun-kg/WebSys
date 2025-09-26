@@ -2,6 +2,65 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 重要: Prismaクライアント使用ガイドライン
+
+### 必須ルール（違反厳禁）
+
+#### ✅ 正しい使用方法
+```typescript
+// ✅ 必ず統一Prismaシングルトンを使用
+import { prisma } from '../lib/prisma';
+
+// 全てのデータベース操作はこのインスタンスを使用
+const users = await prisma.users.findMany();
+const companies = await prisma.companies.findMany();
+const departments = await prisma.departments.findMany();
+```
+
+#### ❌ 絶対禁止事項
+```typescript
+// ❌ 個別インスタンス作成は絶対禁止
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient(); // これは使用不可
+
+// ❌ クラス内での個別作成も禁止
+export class Service {
+  private prisma = new PrismaClient(); // 絶対禁止
+  constructor() {
+    this.prisma = new PrismaClient(); // これも禁止
+  }
+}
+```
+
+### 必須チェック項目
+
+**新規ファイル作成時:**
+- [ ] `import { prisma } from '../lib/prisma'` を使用
+- [ ] `new PrismaClient()` は絶対に使用しない
+- [ ] テーブル名は複数形を使用（users, companies, departments）
+- [ ] プライベートプロパティでのPrisma保持は禁止
+
+**既存ファイル修正時:**
+- [ ] `new PrismaClient()` を全て削除
+- [ ] `this.prisma` を `prisma` に置換
+- [ ] プライベートプロパティの削除
+- [ ] 正しいインポート文への変更
+
+**重要な理由:**
+- 複数インスタンス作成による接続プール枯渇防止
+- メモリリーク防止とリソース効率化
+- 水平展開での安定動作確保
+- グレースフルシャットダウン対応
+
+### 違反時の典型的エラー
+```
+TypeError: Cannot read properties of undefined (reading 'findMany')
+```
+
+このエラーが発生した場合は、必ず上記ガイドラインに従ってPrismaシングルトンに修正してください。
+
+---
+
 ## プロジェクト概要
 
 Vue.js 3 + Element Plus + Express + PostgreSQLを使用した社内システムの開発環境テンプレートです。
@@ -94,3 +153,116 @@ cd workspace/backend     # バックエンド開発
 - Prisma ORM でデータベース管理
 - JWT認証実装済み
 - レスポンシブUI対応
+- ログ監視システム実装済み
+
+## ログ監視システム
+
+### 概要
+アプリケーション全体のログを収集・分析・監視するシステムです。
+フロントエンド・バックエンド・データベース・インフラの各層からログを集約し、
+リアルタイム監視とアラート機能を提供します。
+
+### 機能
+- **ログ収集**: 各ソースからの自動ログ収集
+- **ログ検索**: 高度なフィルタリング・検索機能
+- **統計・分析**: 時間別・カテゴリ別統計
+- **リアルタイム監視**: ダッシュボードでの即座な状況把握
+- **アラート**: 閾値ベースの自動通知
+- **エクスポート**: CSV/JSON形式でのデータ出力
+- **自動クリーンアップ**: ログレベル別保存期間管理
+
+### ログレベル
+```
+FATAL: 60 - 致命的エラー (保存期間: 1年)
+ERROR: 50 - エラー (保存期間: 1年)
+WARN:  40 - 警告 (保存期間: 6ヶ月)
+INFO:  30 - 情報 (保存期間: 3ヶ月)
+DEBUG: 20 - デバッグ (保存期間: 1ヶ月)
+TRACE: 10 - トレース (保存期間: 1ヶ月)
+```
+
+### ログカテゴリ
+- **AUTH**: 認証関連
+- **API**: API呼び出し
+- **DB**: データベース操作
+- **SEC**: セキュリティ
+- **SYS**: システム
+- **USER**: ユーザー操作
+- **PERF**: パフォーマンス
+- **ERR**: エラー処理
+
+### API エンドポイント
+```
+POST /api/logs           - ログ収集 (認証不要)
+GET  /api/logs/search    - ログ検索 (認証必要)
+GET  /api/logs/statistics - 統計データ (認証必要)
+GET  /api/logs/realtime  - リアルタイム統計 (認証必要)
+GET  /api/logs/:id       - ログ詳細 (認証必要)
+POST /api/logs/cleanup   - ログクリーンアップ (管理者のみ)
+GET  /api/logs/export    - ログエクスポート (管理者のみ)
+```
+
+### データベーススキーマ
+- **Log**: メインログテーブル
+- **LogStatistics**: 統計集計テーブル
+- **AlertRule**: アラートルール設定
+
+### 使用方法
+```typescript
+// フロントエンドからのログ送信
+const logs = [{
+  timestamp: new Date().toISOString(),
+  level: 30,
+  category: 'USER',
+  source: 'frontend',
+  message: 'ユーザーがログインしました',
+  userId: 1,
+  environment: 'development'
+}]
+
+await fetch('/api/logs', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ logs })
+})
+```
+
+## データベース管理
+
+### Prismaコマンド
+```bash
+# スキーマからマイグレーション生成・適用
+npx prisma migrate dev --name [migration_name]
+
+# スキーマを直接データベースに反映
+npx prisma db push
+
+# Prisma Client 再生成
+npx prisma generate
+
+# データベース管理画面起動
+npx prisma studio
+
+# データベースリセット (開発環境のみ)
+npx prisma migrate reset --force
+```
+
+### 本番環境での注意
+- `npx prisma migrate reset` は本番環境で実行禁止
+- マイグレーションは事前テスト必須
+- バックアップ取得後にスキーマ変更実行
+
+## API認証システム
+
+### JWT認証
+- ヘッダー: `Authorization: Bearer <token>`
+- 有効期限: 7日間
+- リフレッシュトークン対応
+
+### 権限レベル
+- **USER**: 一般ユーザー
+- **ADMIN**: 管理者 (全機能アクセス可能)
+
+### 保護されたエンドポイント
+- 認証必要: ログ検索・統計・詳細表示
+- 管理者のみ: ログクリーンアップ・エクスポート

@@ -9,13 +9,11 @@ RUN apk add --no-cache git curl
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nextjs -u 1001
 
-# Copy package files first for better caching
-COPY package*.json ./
-RUN npm ci --only=development
+# Skip package copy since we mount the workspace volume
+# Package installation will be handled by the CMD
 
-# Change ownership
-RUN chown -R nextjs:nodejs /app
-USER nextjs
+# Keep running as root for development to avoid permission issues
+# USER nextjs
 
 # Expose port
 EXPOSE 3000
