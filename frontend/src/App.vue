@@ -24,8 +24,8 @@ html, body, #app {
   height: 100%;
   /* BIZ UDゴシック優先のアクセシブルフォントスタック */
   font-family:
-    "BIZ UDPGothic",            /* BIZ UDPゴシック (最優先) */
-    "BIZ UDGothic",             /* BIZ UDゴシック */
+    "BIZ UDGothic",             /* BIZ UDゴシック 等幅 (最優先) */
+    "BIZ UDPGothic",            /* BIZ UDPゴシック プロポーショナル */
     "UD Digi Kyokasho NP-R",    /* UDデジタル教科書体 */
     "UD Digi Kyokasho N-R",     /* UDデジタル教科書体 */
     "Yu Gothic UI",             /* Windows 標準ゴシック */
@@ -53,8 +53,8 @@ html, body, #app {
 .el-menu,
 .el-dropdown {
   font-family:
-    "BIZ UDPGothic",            /* BIZ UDPゴシック (最優先) */
-    "BIZ UDGothic",             /* BIZ UDゴシック */
+    "BIZ UDGothic",             /* BIZ UDゴシック 等幅 (最優先) */
+    "BIZ UDPGothic",            /* BIZ UDPゴシック プロポーショナル */
     "UD Digi Kyokasho NP-R",    /* UDデジタル教科書体 */
     "UD Digi Kyokasho N-R",     /* UDデジタル教科書体 */
     "Yu Gothic UI",             /* Windows 標準ゴシック */
@@ -75,7 +75,7 @@ html, body, #app {
 .el-form-item__label,
 .el-menu-item,
 .el-dropdown-menu__item {
-  font-family: "BIZ UDPGothic", "BIZ UDGothic", sans-serif !important;
+  font-family: "BIZ UDGothic", "BIZ UDPGothic", sans-serif !important;
   font-weight: 400 !important;
 }
 </style>

@@ -53,7 +53,7 @@
       <el-col :span="6">
         <el-card shadow="hover" class="metric-card">
           <div class="metric-content">
-            <el-icon :size="32" color="#67C23A"><MemoryCard /></el-icon>
+            <el-icon :size="32" color="#67C23A"><Cpu /></el-icon>
             <div class="metric-text">
               <h4>メモリ使用率</h4>
               <p>{{ healthStatus?.metrics.memory.percentage.toFixed(1) || 0 }}%</p>
@@ -326,7 +326,7 @@ import {
   Refresh,
   Lightning,
   Monitor,
-  MemoryCard,
+  Cpu,
   Timer,
   CircleCheck,
   Warning,
