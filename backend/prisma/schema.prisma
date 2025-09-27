@@ -48,16 +48,16 @@ model audit_logs {
 
 model companies {
   id                   Int                    @id @default(autoincrement())
-  code                 String                 @unique 
-  name                 String                 
-  nameKana             String?                
-  industry             String?                
-  establishedDate      DateTime?              
+  code                 String                 @unique
+  name                 String
+  nameKana             String?
+  industry             String?
+  establishedDate      DateTime?
   employeeCount        Int?
   address              String?
-  phone                String?                
-  email                String?                
-  contractPlan         String                 @default("STANDARD") 
+  phone                String?
+  email                String?
+  contractPlan         String                 @default("STANDARD")
   maxUsers             Int                    @default(100)
   isActive             Boolean                @default(true)
   createdAt            DateTime               @default(now())
@@ -67,6 +67,8 @@ model companies {
   departments          departments[]
   permission_templates permission_templates[]
   users                users[]
+  workflow_types       workflow_types[]
+  workflow_requests    workflow_requests[]
 
   @@index([code])
   @@index([isActive])
@@ -100,9 +102,9 @@ model department_feature_permissions {
 model departments {
   id                             Int                              @id @default(autoincrement())
   companyId                      Int
-  code                           String                           
-  name                           String                           
-  nameKana                       String?                          
+  code                           String
+  name                           String
+  nameKana                       String?
   parentId                       Int?
   level                          Int                              @default(1)
   path                           String?
@@ -119,6 +121,7 @@ model departments {
   other_departments              departments[]                    @relation("departmentsTodepartments")
   user_departments               user_departments[]
   users                          users[]
+  workflow_requests              workflow_requests[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -342,12 +345,15 @@ model users {
   name                                                                           String
   companyId                                                                      Int?
   primaryDepartmentId                                                            Int?
-  employeeCode                                                                   String?                          
-  joinDate                                                                       DateTime?                        
-  leaveDate                                                                      DateTime?                        
+  employeeCode                                                                   String?
+  joinDate                                                                       DateTime?
+  leaveDate                                                                      DateTime?
   role                                                                           UserRole                         @default(USER)
   isActive                                                                       Boolean                          @default(true)
   lastLoginAt                                                                    DateTime?
+  isFirstLogin                                                                   Boolean                          @default(true)
+  passwordResetToken                                                             String?
+  passwordResetExpiry                                                            DateTime?
   createdAt                                                                      DateTime                         @default(now())
   updatedAt                                                                      DateTime
   audit_logs                                                                     audit_logs[]
@@ -361,6 +367,21 @@ model users {
   user_sessions                                                                  user_sessions[]
   companies                                                                      companies?                       @relation(fields: [companyId], references: [id])
   departments                                                                    departments?                     @relation(fields: [primaryDepartmentId], references: [id])
+
+  // ワークフロー関連リレーション
+  workflow_types_created                                                        workflow_types[]                 @relation("workflow_types_created")
+  workflow_types_updated                                                        workflow_types[]                 @relation("workflow_types_updated")
+  workflow_requests_requester                                                   workflow_requests[]              @relation("workflow_requests_requester")
+  workflow_requests_emergency_approver                                          workflow_requests[]              @relation("workflow_requests_emergency_approver")
+  approval_history_approver                                                     approval_history[]               @relation("approval_history_approver")
+  approval_history_delegated_from                                               approval_history[]               @relation("approval_history_delegated_from")
+  approval_history_delegated_to                                                 approval_history[]               @relation("approval_history_delegated_to")
+  approval_delegates_delegator                                                  approval_delegates[]             @relation("approval_delegates_delegator")
+  approval_delegates_delegate                                                   approval_delegates[]             @relation("approval_delegates_delegate")
+  approval_delegates_created                                                    approval_delegates[]             @relation("approval_delegates_created")
+  workflow_notifications_user                                                   workflow_notifications[]         @relation("workflow_notifications_user")
+  workflow_attachments_uploader                                                 workflow_attachments[]           @relation("workflow_attachments_uploader")
+  workflow_attachments_deleter                                                  workflow_attachments[]           @relation("workflow_attachments_deleter")
 
   @@index([companyId])
   @@index([employeeCode])
@@ -418,4 +439,227 @@ model permission_inheritance_rules {
   @@index([departmentId])
   @@index([featureId])
   @@index([isActive])
+}
+
+// ====================================
+// 申請・承認ワークフロー関連テーブル
+// ====================================
+
+// ワークフロータイプ定義テーブル
+model workflow_types {
+  id                   Int                    @id @default(autoincrement())
+  companyId           Int
+  code                String
+  name                String
+  description         String?
+  category            String                 // EXPENSE, LEAVE, PURCHASE, GENERAL
+  formSchema          Json                   // 申請フォーム定義（JSON）
+  validationRules     Json?                  // バリデーションルール（JSON）
+  autoApproveRules    Json?                  // 自動承認条件（JSON）
+  escalationRules     Json?                  // エスカレーションルール（JSON）
+  notificationSettings Json?                  // 通知設定（JSON）
+  maxAmount           Decimal?               @db.Decimal(15,2)  // 金額上限
+  requireAttachment   Boolean                @default(false)
+  allowBulk           Boolean                @default(false)
+  isActive            Boolean                @default(true)
+  displayOrder        Int                    @default(0)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  createdBy           Int?
+  updatedBy           Int?
+
+  companies           companies              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdUser         users?                 @relation("workflow_types_created", fields: [createdBy], references: [id])
+  updatedUser         users?                 @relation("workflow_types_updated", fields: [updatedBy], references: [id])
+
+  approval_routes     approval_routes[]
+  workflow_requests   workflow_requests[]
+  approval_delegates  approval_delegates[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([category])
+  @@index([isActive])
+}
+
+// 承認ルート定義テーブル
+model approval_routes {
+  id                  Int                    @id @default(autoincrement())
+  workflowTypeId      Int
+  stepNumber          Int
+  approverType        String                 // USER, DEPARTMENT, ROLE, DYNAMIC
+  approverValue       Json                   // 承認者指定（JSON）
+  requiredCount       Int                    @default(1)
+  isParallel          Boolean                @default(false)
+  canSkip             Boolean                @default(false)
+  autoApproveHours    Int?                   // 自動承認までの時間
+  condition           Json?                  // 適用条件（JSON）
+  isActive            Boolean                @default(true)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  workflow_types      workflow_types         @relation(fields: [workflowTypeId], references: [id], onDelete: Cascade)
+  approval_history    approval_history[]
+
+  @@unique([workflowTypeId, stepNumber])
+  @@index([workflowTypeId])
+  @@index([isActive])
+}
+
+// ワークフロー申請テーブル
+model workflow_requests {
+  id                  Int                    @id @default(autoincrement())
+  workflowTypeId      Int
+  requestNumber       String                 @unique
+  companyId           Int
+  requesterId         Int
+  departmentId        Int
+  title               String
+  description         String?
+  formData            Json                   // 申請フォームデータ（JSON）
+  amount              Decimal?               @db.Decimal(15,2)
+  status              String                 // DRAFT, PENDING, APPROVED, REJECTED, CANCELLED, RETURNED
+  currentStep         Int                    @default(1)
+  priority            String                 @default("NORMAL")  // LOW, NORMAL, HIGH, URGENT
+  dueDate             DateTime?
+  submittedAt         DateTime?
+  completedAt         DateTime?
+  isUrgent            Boolean                @default(false)
+  returnReason        String?
+  cancelReason        String?
+  isEmergencyMode     Boolean                @default(false)
+  emergencyReason     String?
+  emergencyApprovedBy Int?
+  emergencyApprovedAt DateTime?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  workflow_types      workflow_types         @relation(fields: [workflowTypeId], references: [id])
+  companies           companies              @relation(fields: [companyId], references: [id])
+  requester           users                  @relation("workflow_requests_requester", fields: [requesterId], references: [id])
+  departments         departments            @relation(fields: [departmentId], references: [id])
+  emergencyApprover   users?                 @relation("workflow_requests_emergency_approver", fields: [emergencyApprovedBy], references: [id])
+
+  approval_history    approval_history[]
+  workflow_notifications workflow_notifications[]
+  workflow_attachments workflow_attachments[]
+
+  @@index([workflowTypeId])
+  @@index([companyId])
+  @@index([requesterId])
+  @@index([departmentId])
+  @@index([status])
+  @@index([currentStep])
+  @@index([priority])
+  @@index([submittedAt])
+  @@index([dueDate])
+  @@index([requestNumber])
+}
+
+// 承認履歴テーブル
+model approval_history {
+  id                  Int                    @id @default(autoincrement())
+  requestId           Int
+  stepNumber          Int
+  routeId             Int?
+  approverId          Int
+  action              String                 // APPROVE, REJECT, RETURN, DELEGATE, SKIP, AUTO_APPROVE
+  comment             String?
+  attachments         Json?                  // 添付ファイル情報（JSON）
+  delegatedFrom       Int?
+  delegatedTo         Int?
+  processedAt         DateTime               @default(now())
+  processingTime      Int?                   // 処理時間（分）
+  isNotified          Boolean                @default(false)
+  createdAt           DateTime               @default(now())
+
+  workflow_requests   workflow_requests      @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  approval_routes     approval_routes?       @relation(fields: [routeId], references: [id])
+  approver            users                  @relation("approval_history_approver", fields: [approverId], references: [id])
+  delegatedFromUser   users?                 @relation("approval_history_delegated_from", fields: [delegatedFrom], references: [id])
+  delegatedToUser     users?                 @relation("approval_history_delegated_to", fields: [delegatedTo], references: [id])
+
+  @@index([requestId, stepNumber])
+  @@index([approverId])
+  @@index([action])
+  @@index([processedAt])
+}
+
+// 承認代理設定テーブル
+model approval_delegates {
+  id                  Int                    @id @default(autoincrement())
+  delegatorId         Int
+  delegateId          Int
+  workflowTypeId      Int?                   // NULL=全ワークフロータイプ
+  startDate           DateTime
+  endDate             DateTime
+  reason              String?
+  isActive            Boolean                @default(true)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  createdBy           Int?
+
+  delegator           users                  @relation("approval_delegates_delegator", fields: [delegatorId], references: [id])
+  delegate            users                  @relation("approval_delegates_delegate", fields: [delegateId], references: [id])
+  workflow_types      workflow_types?        @relation(fields: [workflowTypeId], references: [id])
+  createdUser         users?                 @relation("approval_delegates_created", fields: [createdBy], references: [id])
+
+  @@unique([delegatorId, delegateId, workflowTypeId])
+  @@index([delegatorId])
+  @@index([delegateId])
+  @@index([workflowTypeId])
+  @@index([startDate, endDate])
+  @@index([isActive])
+}
+
+// ワークフロー通知テーブル
+model workflow_notifications {
+  id                  Int                    @id @default(autoincrement())
+  requestId           Int
+  userId              Int
+  type                String                 // REQUEST_SUBMITTED, APPROVAL_REQUIRED, APPROVED, REJECTED, RETURNED, COMPLETED
+  title               String
+  message             String
+  priority            String                 @default("NORMAL")  // LOW, NORMAL, HIGH
+  isRead              Boolean                @default(false)
+  readAt              DateTime?
+  emailSent           Boolean                @default(false)
+  emailSentAt         DateTime?
+  slackSent           Boolean                @default(false)
+  slackSentAt         DateTime?
+  actionUrl           String?
+  metadata            Json?                  // 追加情報（JSON）
+  createdAt           DateTime               @default(now())
+
+  workflow_requests   workflow_requests      @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  user                users                  @relation("workflow_notifications_user", fields: [userId], references: [id])
+
+  @@index([requestId])
+  @@index([userId, isRead])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ワークフロー添付ファイルテーブル
+model workflow_attachments {
+  id                  Int                    @id @default(autoincrement())
+  requestId           Int
+  fileName            String
+  fileSize            Int
+  mimeType            String
+  fileUrl             String
+  thumbnailUrl        String?
+  uploadedBy          Int
+  uploadedAt          DateTime               @default(now())
+  isDeleted           Boolean                @default(false)
+  deletedAt           DateTime?
+  deletedBy           Int?
+
+  workflow_requests   workflow_requests      @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  uploader            users                  @relation("workflow_attachments_uploader", fields: [uploadedBy], references: [id])
+  deleter             users?                 @relation("workflow_attachments_deleter", fields: [deletedBy], references: [id])
+
+  @@index([requestId])
+  @@index([uploadedBy])
+  @@index([isDeleted])
 }

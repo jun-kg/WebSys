@@ -16,6 +16,8 @@ import statisticsRoutes from './routes/statistics.js'
 import permissionInheritanceRoutes from './routes/permissionInheritance.js'
 import reportRoutes from './routes/reports.js'
 import healthRoutes from './routes/health.js'
+import workflowRoutes from './routes/workflow.js'
+import approvalRoutes from './routes/approval.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { initializeWebSocketService } from './services/WebSocketService.js'
 import { SystemHealthService } from './services/SystemHealthService.js'
@@ -66,6 +68,8 @@ app.use('/api/notifications', notificationRoutes)
 app.use('/api/statistics', statisticsRoutes)
 app.use('/api/permissions', permissionInheritanceRoutes)
 app.use('/api/reports', reportRoutes)
+app.use('/api/workflow', workflowRoutes)
+app.use('/api/approval', approvalRoutes)
 app.use('/api', healthRoutes)
 
 // WebSocket接続状況API

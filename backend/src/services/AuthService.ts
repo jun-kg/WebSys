@@ -15,6 +15,8 @@ interface LoginResult {
   token?: string;
   expiresIn?: number;
   error?: string;
+  isFirstLogin?: boolean;
+  requirePasswordChange?: boolean;
 }
 
 interface ClientInfo {
@@ -119,14 +121,19 @@ export class AuthService {
       // 失敗回数リセット
       await this.resetFailedAttempts(user.id);
 
-      // 最終ログイン時刻更新
+      // 最終ログイン時刻更新（初回ログインフラグもリセット）
       await this.updateLastLogin(user.id);
+
+      // 初回ログインチェック
+      const isFirstLogin = user.isFirstLogin || false;
 
       return {
         success: true,
         user: this.sanitizeUser(user),
         token,
-        expiresIn: 8 * 60 * 60 // 8時間（秒）
+        expiresIn: 8 * 60 * 60, // 8時間（秒）
+        isFirstLogin,
+        requirePasswordChange: isFirstLogin
       };
 
     } catch (error) {

@@ -73,7 +73,9 @@ router.post(
           data: {
             token: result.token,
             user: result.user,
-            expiresIn: result.expiresIn
+            expiresIn: result.expiresIn,
+            isFirstLogin: result.isFirstLogin,
+            requirePasswordChange: result.requirePasswordChange
           }
         });
       } else {
@@ -169,6 +171,249 @@ router.get('/verify', async (req, res) => {
     });
   }
 });
+
+// パスワード変更（初回ログイン時・通常変更）
+router.post(
+  '/change-password',
+  authMiddleware,
+  [
+    body('currentPassword')
+      .notEmpty()
+      .withMessage('現在のパスワードは必須です'),
+    body('newPassword')
+      .isLength({ min: 6, max: 128 })
+      .withMessage('新しいパスワードは6-128文字で入力してください')
+      .custom((value, { req }) => value !== req.body.currentPassword)
+      .withMessage('新しいパスワードは現在のパスワードと異なる必要があります')
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: '入力値が不正です',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    try {
+      // ユーザー情報取得
+      const user = await prisma.users.findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'USER_NOT_FOUND',
+            message: 'ユーザーが見つかりません'
+          }
+        });
+      }
+
+      // 現在のパスワード確認
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'INVALID_PASSWORD',
+            message: '現在のパスワードが正しくありません'
+          }
+        });
+      }
+
+      // 新しいパスワードをハッシュ化
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+      // パスワード更新と初回ログインフラグのリセット
+      await prisma.users.update({
+        where: { id: userId },
+        data: {
+          password: hashedPassword,
+          isFirstLogin: false,
+          updatedAt: new Date()
+        }
+      });
+
+      res.json({
+        success: true,
+        message: 'パスワードが正常に変更されました'
+      });
+    } catch (error) {
+      console.error('パスワード変更エラー:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'SYS_001',
+          message: 'サーバーエラーが発生しました'
+        }
+      });
+    }
+  }
+);
+
+// パスワードリセットリクエスト（メール送信）
+router.post(
+  '/request-password-reset',
+  [
+    body('email')
+      .isEmail()
+      .withMessage('有効なメールアドレスを入力してください')
+      .normalizeEmail()
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: '入力値が不正です',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { email } = req.body;
+
+    try {
+      // ユーザー存在確認
+      const user = await prisma.users.findUnique({
+        where: { email }
+      });
+
+      // セキュリティのため、ユーザーが存在しない場合も成功を返す
+      if (!user) {
+        return res.json({
+          success: true,
+          message: 'パスワードリセット用のメールを送信しました（該当するアカウントがある場合）'
+        });
+      }
+
+      // リセットトークン生成
+      const crypto = await import('crypto');
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetExpiry = new Date();
+      resetExpiry.setHours(resetExpiry.getHours() + 1); // 1時間有効
+
+      // トークンを保存
+      await prisma.users.update({
+        where: { id: user.id },
+        data: {
+          passwordResetToken: resetToken,
+          passwordResetExpiry: resetExpiry
+        }
+      });
+
+      // TODO: メール送信実装
+      // 現在は開発環境のため、コンソールにトークンを出力
+      console.log(`Password reset token for ${email}: ${resetToken}`);
+
+      res.json({
+        success: true,
+        message: 'パスワードリセット用のメールを送信しました（該当するアカウントがある場合）',
+        // 開発環境のみトークンを返す
+        ...(process.env.NODE_ENV === 'development' && { resetToken })
+      });
+    } catch (error) {
+      console.error('パスワードリセットリクエストエラー:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'SYS_001',
+          message: 'サーバーエラーが発生しました'
+        }
+      });
+    }
+  }
+);
+
+// パスワードリセット実行
+router.post(
+  '/reset-password',
+  [
+    body('token')
+      .notEmpty()
+      .withMessage('リセットトークンは必須です'),
+    body('newPassword')
+      .isLength({ min: 6, max: 128 })
+      .withMessage('新しいパスワードは6-128文字で入力してください')
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: '入力値が不正です',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { token, newPassword } = req.body;
+
+    try {
+      // トークンでユーザーを検索
+      const user = await prisma.users.findFirst({
+        where: {
+          passwordResetToken: token,
+          passwordResetExpiry: {
+            gt: new Date()
+          }
+        }
+      });
+
+      if (!user) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_TOKEN',
+            message: 'リセットトークンが無効または期限切れです'
+          }
+        });
+      }
+
+      // 新しいパスワードをハッシュ化
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+      // パスワード更新とトークンクリア
+      await prisma.users.update({
+        where: { id: user.id },
+        data: {
+          password: hashedPassword,
+          passwordResetToken: null,
+          passwordResetExpiry: null,
+          isFirstLogin: false,
+          updatedAt: new Date()
+        }
+      });
+
+      res.json({
+        success: true,
+        message: 'パスワードが正常にリセットされました'
+      });
+    } catch (error) {
+      console.error('パスワードリセットエラー:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'SYS_001',
+          message: 'サーバーエラーが発生しました'
+        }
+      });
+    }
+  }
+);
 
 // Register (for initial setup)
 router.post(

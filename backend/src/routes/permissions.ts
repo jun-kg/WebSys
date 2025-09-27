@@ -1245,4 +1245,124 @@ router.delete('/templates/:templateId', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * メニュー表示権限取得
+ * GET /api/permissions/menu
+ */
+router.get('/menu', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    const userRole = (req as any).user.role;
+
+    // 管理者は全メニューにアクセス可能
+    if (userRole === 'ADMIN') {
+      const allMenuItems = [
+        { path: '/dashboard', featureCode: 'DASHBOARD' },
+        { path: '/users', featureCode: 'USER_MANAGEMENT' },
+        { path: '/companies', featureCode: 'USER_MANAGEMENT' },
+        { path: '/departments', featureCode: 'USER_MANAGEMENT' },
+        { path: '/feature-management', featureCode: 'FEATURE_MANAGEMENT' },
+        { path: '/permission-matrix', featureCode: 'PERMISSION_MANAGEMENT' },
+        { path: '/permission-template', featureCode: 'PERMISSION_MANAGEMENT' },
+        { path: '/log-monitoring', featureCode: 'LOG_MONITORING' },
+        { path: '/alert-rules', featureCode: 'LOG_MONITORING' },
+        { path: '/notification-settings', featureCode: 'LOG_MONITORING' },
+        { path: '/reports', featureCode: 'REPORT' },
+        { path: '/system-health', featureCode: 'LOG_MONITORING' },
+        { path: '/workflow-dashboard', featureCode: 'PERMISSION_MANAGEMENT' },
+        { path: '/workflow-types', featureCode: 'PERMISSION_MANAGEMENT' },
+        { path: '/workflow-requests', featureCode: 'PERMISSION_MANAGEMENT' },
+        { path: '/approval-process', featureCode: 'PERMISSION_MANAGEMENT' },
+        { path: '/approval-routes', featureCode: 'PERMISSION_MANAGEMENT' }
+      ];
+
+      return res.json({
+        success: true,
+        data: {
+          menuItems: allMenuItems.map(item => ({
+            path: item.path,
+            hasAccess: true,
+            featureCode: item.featureCode
+          }))
+        }
+      });
+    }
+
+    // ユーザーの部署権限を取得
+    const user = await prisma.users.findUnique({
+      where: { id: userId },
+      include: {
+        user_departments: {
+          where: { expiredDate: null },
+          select: { departmentId: true }
+        }
+      }
+    });
+
+    if (!user || user.user_departments.length === 0) {
+      return res.json({
+        success: true,
+        data: { menuItems: [] }
+      });
+    }
+
+    const departmentIds = user.user_departments.map(ud => ud.departmentId);
+
+    // メニューアイテムと対応する機能コードのマッピング
+    const menuFeatureMapping = [
+      { path: '/dashboard', featureCode: 'DASHBOARD' },
+      { path: '/users', featureCode: 'USER_MANAGEMENT' },
+      { path: '/companies', featureCode: 'USER_MANAGEMENT' },
+      { path: '/departments', featureCode: 'USER_MANAGEMENT' },
+      { path: '/feature-management', featureCode: 'FEATURE_MANAGEMENT' },
+      { path: '/permission-matrix', featureCode: 'PERMISSION_MANAGEMENT' },
+      { path: '/permission-template', featureCode: 'PERMISSION_MANAGEMENT' },
+      { path: '/log-monitoring', featureCode: 'LOG_MONITORING' },
+      { path: '/alert-rules', featureCode: 'LOG_MONITORING' },
+      { path: '/notification-settings', featureCode: 'LOG_MONITORING' },
+      { path: '/reports', featureCode: 'REPORT' },
+      { path: '/system-health', featureCode: 'LOG_MONITORING' },
+      { path: '/workflow-dashboard', featureCode: 'PERMISSION_MANAGEMENT' },
+      { path: '/workflow-types', featureCode: 'PERMISSION_MANAGEMENT' },
+      { path: '/workflow-requests', featureCode: 'PERMISSION_MANAGEMENT' },
+      { path: '/approval-process', featureCode: 'PERMISSION_MANAGEMENT' },
+      { path: '/approval-routes', featureCode: 'PERMISSION_MANAGEMENT' }
+    ];
+
+    // 各メニューアイテムの権限をチェック
+    const menuPermissions = await Promise.all(
+      menuFeatureMapping.map(async (item) => {
+        const hasAccess = await checkUserPermission(userId, item.featureCode, 'VIEW');
+        return {
+          path: item.path,
+          featureCode: item.featureCode,
+          hasAccess
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      data: {
+        menuItems: menuPermissions,
+        userRole,
+        departments: departmentIds
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        requestId: req.headers['x-request-id']
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching menu permissions:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'サーバー内部エラーが発生しました'
+      }
+    });
+  }
+});
+
 export default router;

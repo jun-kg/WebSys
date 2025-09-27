@@ -170,8 +170,13 @@ router.post(
       .withMessage('有効なメールアドレスを入力してください')
       .normalizeEmail(),
     body('password')
+      .optional()
       .isLength({ min: 6, max: 128 })
       .withMessage('パスワードは6-128文字で入力してください'),
+    body('useDefaultPassword')
+      .optional()
+      .isBoolean()
+      .withMessage('デフォルトパスワード使用フラグはbooleanで指定してください'),
     body('name')
       .notEmpty()
       .withMessage('氏名は必須です')
@@ -195,22 +200,11 @@ router.post(
       .withMessage('有効な役割を指定してください')
   ],
   async (req, res) => {
-    const errors = validationResult(req)
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: '入力値が不正です',
-          details: errors.array()
-        }
-      })
-    }
-
     const {
       username,
       email,
       password,
+      useDefaultPassword,
       name,
       companyId,
       primaryDepartmentId,
@@ -218,6 +212,24 @@ router.post(
       joinDate,
       role
     } = req.body
+
+    // useDefaultPasswordが指定されている場合はpasswordのバリデーションをスキップ
+    const errors = validationResult(req);
+    const filteredErrors = errors.array().filter(error => {
+      // useDefaultPasswordがtrueの場合、passwordエラーをスキップ
+      return !(useDefaultPassword && error.path === 'password');
+    });
+
+    if (filteredErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: '入力値が不正です',
+          details: filteredErrors
+        }
+      });
+    }
 
     try {
       // Check if user exists
@@ -268,8 +280,12 @@ router.post(
         }
       }
 
+      // パスワードの設定: デフォルトパスワードまたは指定されたパスワード
+      const DEFAULT_PASSWORD = process.env.DEFAULT_USER_PASSWORD || 'Welcome123!'
+      const passwordToUse = useDefaultPassword ? DEFAULT_PASSWORD : (password || DEFAULT_PASSWORD)
+
       // Hash password
-      const hashedPassword = await bcrypt.hash(password, 12)
+      const hashedPassword = await bcrypt.hash(passwordToUse, 12)
 
       // Create user
       const user = await prisma.users.create({
@@ -282,7 +298,9 @@ router.post(
           primaryDepartmentId: primaryDepartmentId || null,
           employeeCode: employeeCode || null,
           joinDate: joinDate ? new Date(joinDate) : null,
-          role: role || 'USER'
+          isFirstLogin: true, // 新規ユーザーは必ず初回ログインフラグを設定
+          role: role || 'USER',
+          updatedAt: new Date()
         },
         select: {
           id: true,
@@ -316,7 +334,9 @@ router.post(
       res.status(201).json({
         success: true,
         data: { user },
-        message: 'ユーザーを作成しました'
+        message: useDefaultPassword || !password ?
+          `ユーザーが作成されました。初期パスワード: ${passwordToUse}` :
+          'ユーザーが作成されました。'
       })
     } catch (error) {
       console.error('Create user error:', error)

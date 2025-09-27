@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthService } from '../services/AuthService';
-import { User, UserRole } from '@prisma/client';
+import { users, usersRole } from '@prisma/client';
 
 interface AuthenticatedRequest extends Request {
-  user?: User;
+  user?: users;
   token?: string;
 }
 
@@ -24,7 +24,7 @@ interface JwtPayload {
 declare global {
   namespace Express {
     interface Request {
-      user?: User;
+      user?: users;
       token?: string;
     }
   }
@@ -131,7 +131,7 @@ export const authMiddleware = async (
   }
 };
 
-export const requireRole = (allowedRoles: UserRole[]) => {
+export const requireRole = (allowedRoles: usersRole[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({
@@ -187,7 +187,7 @@ export const requirePermission = (featureCode: string, action: string) => {
 
 export const requireAdmin = requireRole(['ADMIN']);
 export const requireManager = requireRole(['ADMIN', 'MANAGER']);
-export const requireUser = requireRole(['ADMIN', 'MANAGER', 'USER']);
+export const requireusers = requireRole(['ADMIN', 'MANAGER', 'USER']);
 
 export const getClientInfo = (req: Request): ClientInfo => {
   const ipAddress = (req.headers['x-forwarded-for'] as string) ||
@@ -205,4 +205,4 @@ export const getClientInfo = (req: Request): ClientInfo => {
 
 // 既存のミドルウェアとの互換性のため
 export const authenticate = authMiddleware;
-export const authorize = (roles: string[]) => requireRole(roles as UserRole[]);
+export const authorize = (roles: string[]) => requireRole(roles as usersRole[]);
