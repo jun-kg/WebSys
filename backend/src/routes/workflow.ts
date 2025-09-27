@@ -3,6 +3,7 @@ import { body, param, query } from 'express-validator';
 import { WorkflowService } from '../services/WorkflowService';
 import { EmergencyApprovalService } from '../services/EmergencyApprovalService';
 import { ApprovalDelegationService } from '../services/ApprovalDelegationService';
+import { ProxyApprovalService } from '../services/ProxyApprovalService';
 import { authenticate, requireRole } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 import {
@@ -17,6 +18,7 @@ const router = Router();
 const workflowService = new WorkflowService();
 const emergencyApprovalService = new EmergencyApprovalService();
 const delegationService = new ApprovalDelegationService();
+const proxyApprovalService = new ProxyApprovalService();
 
 // ============ ワークフロータイプ管理 ============
 
@@ -785,6 +787,232 @@ router.post('/delegations/cleanup',
     } catch (error) {
       console.error('期限切れ委任無効化エラー:', error);
       res.status(500).json({ success: false, error: '期限切れ委任の無効化に失敗しました' });
+    }
+  }
+);
+
+// ============ 承認代理管理 ============
+
+// 代理承認実行
+router.post('/proxy-approval',
+  authenticate,
+  [
+    body('requestId').isInt().withMessage('申請IDは数値である必要があります'),
+    body('stepNumber').isInt().withMessage('ステップ番号は数値である必要があります'),
+    body('originalApproverId').isInt().withMessage('元承認者IDは数値である必要があります'),
+    body('proxyApproverId').isInt().withMessage('代理承認者IDは数値である必要があります'),
+    body('action').isIn(['APPROVE', 'REJECT', 'RETURN']).withMessage('アクションは APPROVE, REJECT, RETURN のいずれかである必要があります'),
+    body('proxyReason').notEmpty().withMessage('代理理由は必須です'),
+    body('comment').optional().isString().withMessage('コメントは文字列である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { requestId, stepNumber, originalApproverId, proxyApproverId, action, comment, proxyReason, attachments } = req.body;
+
+      const result = await proxyApprovalService.executeProxyApproval({
+        requestId,
+        stepNumber,
+        originalApproverId,
+        proxyApproverId,
+        action,
+        comment,
+        proxyReason,
+        attachments
+      });
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('代理承認実行エラー:', error);
+      res.status(500).json({ success: false, error: error.message || '代理承認の実行に失敗しました' });
+    }
+  }
+);
+
+// 代理承認可能性チェック
+router.get('/proxy-approval/check',
+  authenticate,
+  [
+    query('requestId').isInt().withMessage('申請IDは数値である必要があります'),
+    query('stepNumber').isInt().withMessage('ステップ番号は数値である必要があります'),
+    query('originalApproverId').isInt().withMessage('元承認者IDは数値である必要があります'),
+    query('proxyApproverId').isInt().withMessage('代理承認者IDは数値である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { requestId, stepNumber, originalApproverId, proxyApproverId } = req.query;
+
+      const result = await proxyApprovalService.canProxyApprove(
+        Number(requestId),
+        Number(stepNumber),
+        Number(originalApproverId),
+        Number(proxyApproverId)
+      );
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('代理承認可能性チェックエラー:', error);
+      res.status(500).json({ success: false, error: '代理承認可能性のチェックに失敗しました' });
+    }
+  }
+);
+
+// 代理指定作成
+router.post('/proxy-designation',
+  authenticate,
+  [
+    body('requestId').isInt().withMessage('申請IDは数値である必要があります'),
+    body('stepNumber').isInt().withMessage('ステップ番号は数値である必要があります'),
+    body('proxyApproverId').isInt().withMessage('代理承認者IDは数値である必要があります'),
+    body('reason').notEmpty().withMessage('理由は必須です')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { requestId, stepNumber, proxyApproverId, reason } = req.body;
+      const originalApproverId = req.user.id;
+
+      const result = await proxyApprovalService.createProxyDesignation({
+        requestId,
+        stepNumber,
+        originalApproverId,
+        proxyApproverId,
+        reason
+      });
+
+      res.status(201).json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('代理指定作成エラー:', error);
+      res.status(500).json({ success: false, error: error.message || '代理指定の作成に失敗しました' });
+    }
+  }
+);
+
+// 代理指定取得
+router.get('/proxy-designation/:requestId',
+  authenticate,
+  [
+    param('requestId').isInt().withMessage('申請IDは数値である必要があります'),
+    query('stepNumber').optional().isInt().withMessage('ステップ番号は数値である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { requestId } = req.params;
+      const { stepNumber } = req.query;
+
+      const result = await proxyApprovalService.getProxyDesignations(
+        Number(requestId),
+        stepNumber ? Number(stepNumber) : undefined
+      );
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('代理指定取得エラー:', error);
+      res.status(500).json({ success: false, error: '代理指定の取得に失敗しました' });
+    }
+  }
+);
+
+// 代理指定取消
+router.delete('/proxy-designation/:id',
+  authenticate,
+  [
+    param('id').isInt().withMessage('代理指定IDは数値である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const cancelledBy = req.user.id;
+
+      const result = await proxyApprovalService.cancelProxyDesignation(Number(id), cancelledBy);
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('代理指定取消エラー:', error);
+      res.status(500).json({ success: false, error: error.message || '代理指定の取消に失敗しました' });
+    }
+  }
+);
+
+// 代理承認履歴取得
+router.get('/proxy-approvals',
+  authenticate,
+  [
+    query('page').optional().isInt({ min: 1 }).withMessage('ページは1以上の整数である必要があります'),
+    query('pageSize').optional().isInt({ min: 1, max: 100 }).withMessage('ページサイズは1-100の整数である必要があります'),
+    query('requestId').optional().isInt().withMessage('申請IDは数値である必要があります'),
+    query('originalApproverId').optional().isInt().withMessage('元承認者IDは数値である必要があります'),
+    query('proxyApproverId').optional().isInt().withMessage('代理承認者IDは数値である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { page, pageSize, requestId, originalApproverId, proxyApproverId, startDate, endDate } = req.query;
+      const companyId = req.user.companyId;
+
+      const result = await proxyApprovalService.getProxyApprovalHistory(companyId, {
+        page: page ? Number(page) : 1,
+        pageSize: pageSize ? Number(pageSize) : 20,
+        requestId: requestId ? Number(requestId) : undefined,
+        originalApproverId: originalApproverId ? Number(originalApproverId) : undefined,
+        proxyApproverId: proxyApproverId ? Number(proxyApproverId) : undefined,
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined
+      });
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('代理承認履歴取得エラー:', error);
+      res.status(500).json({ success: false, error: '代理承認履歴の取得に失敗しました' });
+    }
+  }
+);
+
+// 代理承認統計取得
+router.get('/proxy-approvals/statistics',
+  authenticate,
+  [
+    query('days').optional().isInt({ min: 1, max: 365 }).withMessage('日数は1-365の整数である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { days } = req.query;
+      const companyId = req.user.companyId;
+
+      const result = await proxyApprovalService.getProxyApprovalStatistics(
+        companyId,
+        days ? Number(days) : 30
+      );
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('代理承認統計取得エラー:', error);
+      res.status(500).json({ success: false, error: '代理承認統計の取得に失敗しました' });
     }
   }
 );

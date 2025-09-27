@@ -571,6 +571,8 @@ model approval_history {
   processedAt         DateTime               @default(now())
   processingTime      Int?                   // 処理時間（分）
   isNotified          Boolean                @default(false)
+  isProxy             Boolean                @default(false)
+  proxyReason         String?
   createdAt           DateTime               @default(now())
 
   workflow_requests   workflow_requests      @relation(fields: [requestId], references: [id], onDelete: Cascade)
