@@ -58,12 +58,6 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/PermissionTemplate.vue'),
         meta: { title: '権限テンプレート', requiresPermission: 'PERMISSION_MANAGEMENT' }
       },
-      {
-        path: 'code-preview-demo',
-        name: 'CodePreviewDemo',
-        component: () => import('@/views/CodePreviewDemo.vue'),
-        meta: { title: 'CodePreview デモ' }
-      },
       // {
       //   path: 'api-test',
       //   name: 'ApiTest',

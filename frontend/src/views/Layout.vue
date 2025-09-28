@@ -73,10 +73,6 @@
           </div>
 
           <!-- その他のメニュー項目 -->
-          <div class="nav-item" @click="navigateAndClose('/code-preview-demo')">
-            <el-icon><Document /></el-icon>
-            <span>CodePreview デモ</span>
-          </div>
 
           <div v-if="hasMenuAccess('/log-monitoring')" class="nav-item" @click="navigateAndClose('/log-monitoring')">
             <el-icon><Monitor /></el-icon>
@@ -189,11 +185,6 @@
           </el-menu-item>
         </el-sub-menu>
 
-        <!-- デモ -->
-        <el-menu-item index="/code-preview-demo">
-          <el-icon><Document /></el-icon>
-          <span>CodePreview デモ</span>
-        </el-menu-item>
 
         <!-- ログ監視システム -->
         <el-menu-item v-if="hasMenuAccess('/log-monitoring')" index="/log-monitoring">

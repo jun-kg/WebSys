@@ -12,17 +12,15 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
-    "@company/shared-components": "file:../../packages/shared-components",
-    "@company/shared-theme": "file:../../packages/shared-theme",
     "@element-plus/icons-vue": "^2.3.1",
     "@fontsource/biz-udgothic": "^5.2.7",
     "@fontsource/biz-udpgothic": "^5.2.8",
     "@types/d3": "^7.4.3",
     "axios": "^1.6.5",
     "d3": "^7.9.0",
+    "echarts": "^6.0.0",
     "element-plus": "^2.5.1",
     "pinia": "^2.1.7",
-    "prismjs": "^1.30.0",
     "socket.io-client": "^4.8.1",
     "vue": "^3.4.15",
     "vue-router": "^4.2.5"
