@@ -1,0 +1,50 @@
+/**
+ * Optimized Font Loading Strategy
+ * BIZ Gothic最適化フォント読み込み戦略
+ *
+ * モバイル最適化:
+ * - 必要な文字セットのみ読み込み（日本語 + 基本ラテン文字）
+ * - 重要でない文字セットを除外（キリル文字、拡張ラテン文字等）
+ * - font-display: swap でフォント読み込み中も文字表示を保証
+ */
+
+/* BIZ UDゴシック - 400 weight のみ使用 */
+@font-face {
+  font-family: 'BIZ UDGothic';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/bizudgothic/v3/g42JGwP2CtOYDL7r4oLwJF4YKH0yWFRB.woff2') format('woff2');
+  unicode-range: U+0020-007F, U+3040-309F, U+30A0-30FF, U+4E00-9FAF, U+FF00-FFEF;
+}
+
+/* BIZ UDゴシック - 700 weight のみ使用 */
+@font-face {
+  font-family: 'BIZ UDGothic';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/bizudgothic/v3/g42AGwP2CtOYDL7r4oLwJF4YKLg_bmJP.woff2') format('woff2');
+  unicode-range: U+0020-007F, U+3040-309F, U+30A0-30FF, U+4E00-9FAF, U+FF00-FFEF;
+}
+
+/* フォールバックフォント定義 - BIZ UDゴシックのみ使用 */
+.font-biz-gothic {
+  font-family: 'BIZ UDGothic', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif;
+}
+
+/* 最適化されたフォントファミリー設定 */
+body, #app {
+  font-family: 'BIZ UDGothic', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif;
+  font-display: swap;
+}
+
+/* プリロード用CSS（Critical CSS用） */
+@media (prefers-reduced-motion: no-preference) {
+  .font-preload-hint {
+    font-family: 'BIZ UDGothic', sans-serif;
+    visibility: hidden;
+    position: absolute;
+    left: -999px;
+  }
+}

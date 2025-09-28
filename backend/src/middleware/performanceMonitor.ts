@@ -47,14 +47,39 @@ class AlertManager {
 
 class MetricsCollector {
   private metrics: PerformanceMetrics[] = [];
-  private readonly maxMetrics = 10000; // メモリ使用量制限
+  private readonly maxMetrics = 1000; // メモリ使用量制限を大幅削減
+  private readonly batchSize = 100;
+  private lastCleanup = Date.now();
+  private readonly cleanupInterval = 300000; // 5分
 
   record(metric: PerformanceMetrics): void {
     this.metrics.push(metric);
 
-    // メモリ使用量制限
+    // 定期的なバッチクリーンアップ
+    const now = Date.now();
+    if (now - this.lastCleanup > this.cleanupInterval) {
+      this.performCleanup();
+      this.lastCleanup = now;
+    }
+
+    // 緊急時のメモリ制限
     if (this.metrics.length > this.maxMetrics) {
-      this.metrics.shift(); // 古いメトリクスを削除
+      // バッチで古いメトリクスを削除
+      this.metrics.splice(0, this.batchSize);
+    }
+  }
+
+  private performCleanup(): void {
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 3600000); // 1時間前
+
+    // 1時間以上古いメトリクスを削除
+    const initialLength = this.metrics.length;
+    this.metrics = this.metrics.filter(m => m.timestamp >= oneHourAgo);
+
+    const cleanedCount = initialLength - this.metrics.length;
+    if (cleanedCount > 0) {
+      console.log(`[PerformanceMonitor] Cleaned up ${cleanedCount} old metrics`);
     }
   }
 

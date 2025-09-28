@@ -169,19 +169,80 @@ export const requirePermission = (featureCode: string, action: string) => {
       });
     }
 
-    // TODO: 権限チェックロジックを実装
-    // 現在は仮実装として管理者のみ許可
-    if (req.user.role !== 'ADMIN') {
+    // 管理者は全権限を持つ
+    if (req.user.role === 'ADMIN') {
+      next();
+      return;
+    }
+
+    try {
+      // ユーザーの権限を取得
+      const userPermissions = await prisma.userPermissions.findMany({
+        where: {
+          userId: req.user.id,
+          isActive: true
+        },
+        include: {
+          feature: true
+        }
+      });
+
+      // 部署の権限も取得（ユーザーが部署に所属している場合）
+      let departmentPermissions: any[] = [];
+      if (req.user.departmentId) {
+        departmentPermissions = await prisma.departmentPermissions.findMany({
+          where: {
+            departmentId: req.user.departmentId,
+            isActive: true
+          },
+          include: {
+            feature: true
+          }
+        });
+      }
+
+      // 機能コードに対応する権限をチェック
+      const hasUserPermission = userPermissions.some(perm =>
+        perm.feature.code === featureCode &&
+        (action === 'READ' ? perm.canView :
+         action === 'CREATE' ? perm.canCreate :
+         action === 'UPDATE' ? perm.canEdit :
+         action === 'DELETE' ? perm.canDelete : false)
+      );
+
+      const hasDepartmentPermission = departmentPermissions.some(perm =>
+        perm.feature.code === featureCode &&
+        (action === 'READ' ? perm.canView :
+         action === 'CREATE' ? perm.canCreate :
+         action === 'UPDATE' ? perm.canEdit :
+         action === 'DELETE' ? perm.canDelete : false)
+      );
+
+      // ユーザー権限または部署権限のどちらかがあれば許可
+      if (hasUserPermission || hasDepartmentPermission) {
+        next();
+        return;
+      }
+
+      // 権限がない場合は403エラー
       return res.status(403).json({
         success: false,
         error: {
           code: 'AUTH_004',
-          message: 'Permission denied'
+          message: `Permission denied: ${featureCode}.${action}`
+        }
+      });
+
+    } catch (error) {
+      console.error('Permission check error:', error);
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: 'AUTH_005',
+          message: 'Permission check failed'
         }
       });
     }
-
-    next();
   };
 };
 

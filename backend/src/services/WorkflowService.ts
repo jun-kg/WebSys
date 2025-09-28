@@ -655,14 +655,93 @@ export class WorkflowService {
    * ユーザーの承認待ち件数取得
    */
   async getPendingApprovalCount(userId: number, companyId: number): Promise<number> {
-    // TODO: 承認者の判定ロジックを実装
-    // 現在は簡易実装
-    return await prisma.workflow_requests.count({
-      where: {
-        companyId,
-        status: WorkflowStatus.PENDING
+    try {
+      // 1. ユーザーが直接的に承認者として設定されている申請
+      const directApprovalCount = await prisma.workflow_requests.count({
+        where: {
+          companyId,
+          status: WorkflowStatus.PENDING,
+          approvals: {
+            some: {
+              approverId: userId,
+              status: ApprovalStatus.PENDING
+            }
+          }
+        }
+      });
+
+      // 2. ユーザーの部署・役職に基づく承認権限のある申請
+      const user = await prisma.users.findUnique({
+        where: { id: userId },
+        include: { department: true }
+      });
+
+      if (!user) return directApprovalCount;
+
+      let departmentApprovalCount = 0;
+      if (user.departmentId) {
+        // 部署ベースの承認ルートで承認権限のある申請を取得
+        departmentApprovalCount = await prisma.workflow_requests.count({
+          where: {
+            companyId,
+            status: WorkflowStatus.PENDING,
+            approvalRoutes: {
+              some: {
+                approvals: {
+                  some: {
+                    OR: [
+                      // 部署ベースの承認
+                      {
+                        departmentId: user.departmentId,
+                        status: ApprovalStatus.PENDING
+                      },
+                      // 役職ベースの承認（管理者・マネージャー）
+                      {
+                        approverId: userId,
+                        status: ApprovalStatus.PENDING
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        });
       }
-    });
+
+      // 3. 代理承認権限がある場合の申請（管理者等）
+      let delegatedApprovalCount = 0;
+      if (user.role === 'ADMIN') {
+        // 管理者は全ての承認待ち申請に対して承認権限を持つ
+        const totalPendingCount = await prisma.workflow_requests.count({
+          where: {
+            companyId,
+            status: WorkflowStatus.PENDING
+          }
+        });
+
+        // 重複を避けるため、直接承認と部署承認以外の件数
+        delegatedApprovalCount = Math.max(0, totalPendingCount - directApprovalCount - departmentApprovalCount);
+      }
+
+      return directApprovalCount + departmentApprovalCount + delegatedApprovalCount;
+
+    } catch (error) {
+      console.error('Error getting pending approval count:', error);
+      // エラー時は安全のため直接的な承認のみ返す
+      return await prisma.workflow_requests.count({
+        where: {
+          companyId,
+          status: WorkflowStatus.PENDING,
+          approvals: {
+            some: {
+              approverId: userId,
+              status: ApprovalStatus.PENDING
+            }
+          }
+        }
+      });
+    }
   }
 
   /**

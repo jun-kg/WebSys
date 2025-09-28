@@ -313,9 +313,13 @@ router.post(
         }
       });
 
-      // TODO: メール送信実装
-      // 現在は開発環境のため、コンソールにトークンを出力
-      console.log(`Password reset token for ${email}: ${resetToken}`);
+      // メール送信実装
+      const { emailService } = await import('../utils/email');
+      const emailSent = await emailService.sendPasswordResetEmail(email, resetToken, user.username);
+
+      if (!emailSent) {
+        console.warn(`Failed to send password reset email to ${email}`);
+      }
 
       res.json({
         success: true,

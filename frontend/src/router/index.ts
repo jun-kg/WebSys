@@ -2,12 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-// よく使われるコンポーネントを事前読み込み（パフォーマンス改善）
-import Dashboard from '@/views/Dashboard.vue'
-import Users from '@/views/Users.vue'
-import Companies from '@/views/Companies.vue'
-import Departments from '@/views/Departments.vue'
-import LogMonitoring from '@/views/LogMonitoring.vue'
+// 全てのコンポーネントを遅延読み込みに変更（初期バンドルサイズ最適化）
 
 const routes: RouteRecordRaw[] = [
   {
@@ -19,25 +14,25 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'dashboard',
         name: 'Dashboard',
-        component: Dashboard,
+        component: () => import('@/views/Dashboard.vue'),
         meta: { title: 'ダッシュボード', requiresPermission: 'DASHBOARD' }
       },
       {
         path: 'users',
         name: 'Users',
-        component: Users,
+        component: () => import('@/views/Users.vue'),
         meta: { title: 'ユーザー管理', requiresPermission: 'USER_MANAGEMENT' }
       },
       {
         path: 'companies',
         name: 'Companies',
-        component: Companies,
+        component: () => import('@/views/Companies.vue'),
         meta: { title: '会社管理', requiresPermission: 'USER_MANAGEMENT' }
       },
       {
         path: 'departments',
         name: 'Departments',
-        component: Departments,
+        component: () => import('@/views/Departments.vue'),
         meta: { title: '部署管理', requiresPermission: 'USER_MANAGEMENT' }
       },
       {
@@ -67,7 +62,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'log-monitoring',
         name: 'LogMonitoring',
-        component: LogMonitoring,
+        component: () => import('@/views/LogMonitoring.vue'),
         meta: { title: 'ログ監視システム', requiresPermission: 'LOG_MONITORING' }
       },
       {
