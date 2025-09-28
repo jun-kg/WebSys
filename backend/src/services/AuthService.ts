@@ -1,8 +1,8 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { User, UserRole } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { AuditService } from './AuditService';
+import { securityService } from './SecurityService';
+import { log, LogCategory } from '../utils/logger';
 
 interface LoginRequest {
   username: string;
@@ -12,8 +12,10 @@ interface LoginRequest {
 interface LoginResult {
   success: boolean;
   user?: User;
-  token?: string;
-  expiresIn?: number;
+  accessToken?: string;
+  refreshToken?: string;
+  accessExpiresIn?: number;
+  refreshExpiresIn?: number;
   error?: string;
   isFirstLogin?: boolean;
   requirePasswordChange?: boolean;
@@ -29,7 +31,7 @@ interface TokenVerificationResult {
   user?: User;
   expiresIn?: number;
   error?: string;
-  errorCode?: string;
+  errorCode?: 'EXPIRED' | 'INVALID' | 'BLACKLISTED' | 'MALFORMED' | 'SESSION_NOT_FOUND' | 'USER_NOT_FOUND' | 'USER_INACTIVE';
 }
 
 interface ValidationResult {
@@ -44,9 +46,6 @@ interface LockStatus {
 
 export class AuthService {
   private auditService: AuditService;
-  private saltRounds = 12;
-  private tokenSecret = process.env.JWT_SECRET || 'development-secret-key';
-  private tokenExpiry = '8h';
 
   constructor() {
     this.auditService = new AuditService();
@@ -68,23 +67,27 @@ export class AuthService {
         return { success: false, error: 'ユーザー名またはパスワードが正しくありません' };
       }
 
-      // アカウントロック確認
-      const lockStatus = await this.checkAccountLock(user.id);
-      if (lockStatus.isLocked) {
+      // アカウントロック確認（SecurityService使用）
+      const lockCheck = securityService.checkLoginAttempts(user.username);
+      if (lockCheck.isLocked) {
         await this.logFailedAttempt(request.username, clientInfo, 'ACCOUNT_LOCKED');
         return {
           success: false,
-          error: `アカウントがロックされています。${lockStatus.unlockAt}まで待機してください`
+          error: `アカウントがロックされています。${lockCheck.lockUntil?.toLocaleString()}まで待機してください`
         };
       }
 
-      // パスワード検証
-      const isPasswordValid = await bcrypt.compare(request.password, user.password);
+      // パスワード検証（SecurityService使用）
+      const isPasswordValid = await securityService.verifyPassword(request.password, user.password);
       if (!isPasswordValid) {
+        securityService.recordFailedLogin(user.username);
         await this.recordFailedAttempt(user.id, clientInfo);
         await this.logFailedAttempt(request.username, clientInfo, 'WRONG_PASSWORD');
         return { success: false, error: 'ユーザー名またはパスワードが正しくありません' };
       }
+
+      // ログイン成功時の失敗回数リセット
+      securityService.clearFailedAttempts(user.username);
 
       // アクティブユーザー確認
       if (!user.isActive) {
@@ -99,21 +102,11 @@ export class AuthService {
         await this.cleanupOldestSession(user.id);
       }
 
-      // JWTトークン生成
-      const tokenPayload = {
-        userId: user.id,
-        username: user.username,
-        role: user.role,
-        companyId: user.companyId,
-        departmentId: user.primaryDepartmentId
-      };
+      // JWT トークンペア生成（SecurityService使用）
+      const tokenPair = await securityService.generateTokenPair(user);
 
-      const token = jwt.sign(tokenPayload, this.tokenSecret, {
-        expiresIn: this.tokenExpiry
-      });
-
-      // セッション保存
-      await this.createSession(user.id, token, clientInfo);
+      // セッション保存（アクセストークンのみ保存）
+      await this.createSession(user.id, tokenPair.accessToken, clientInfo);
 
       // ログイン履歴記録
       await this.logSuccessfulLogin(user.id, clientInfo);
@@ -130,8 +123,10 @@ export class AuthService {
       return {
         success: true,
         user: this.sanitizeUser(user),
-        token,
-        expiresIn: 8 * 60 * 60, // 8時間（秒）
+        accessToken: tokenPair.accessToken,
+        refreshToken: tokenPair.refreshToken,
+        accessExpiresIn: tokenPair.accessExpiresIn,
+        refreshExpiresIn: tokenPair.refreshExpiresIn,
         isFirstLogin,
         requirePasswordChange: isFirstLogin
       };
@@ -144,128 +139,59 @@ export class AuthService {
 
   async logout(token: string): Promise<void> {
     try {
-      // トークンから情報を抽出
-      const decoded = jwt.decode(token) as any;
-      if (!decoded?.userId) return;
+      // SecurityServiceを使用してトークン検証・無効化
+      const validation = securityService.validateAccessToken(token);
+      if (!validation.isValid || !validation.payload) {
+        log.warn(LogCategory.AUTH, 'Invalid token in logout attempt', { token: token.substring(0, 20) + '...' });
+        return;
+      }
+
+      // リフレッシュトークンも無効化
+      await securityService.revokeTokens(validation.payload.userId, validation.payload.jti);
 
       // セッション無効化
       await this.invalidateSession(token);
 
       // ログアウト履歴記録
-      await this.logLogout(decoded.userId);
+      await this.logLogout(validation.payload.userId);
 
     } catch (error) {
-      console.error('Logout error:', error);
+      log.error(LogCategory.AUTH, 'Logout error', error as Error);
     }
   }
 
   async verifyToken(token: string): Promise<TokenVerificationResult> {
     try {
-      // トークン形式の事前チェック
-      if (!token || typeof token !== 'string') {
+      // SecurityServiceを使用してトークン検証
+      const validation = securityService.validateAccessToken(token);
+
+      if (!validation.isValid) {
         return {
           isValid: false,
-          error: 'トークンが提供されていません',
-          errorCode: 'TOKEN_MISSING'
+          error: validation.error || 'トークンが無効です',
+          errorCode: validation.errorCode
         };
       }
 
-      if (token.length < 10 || token.length > 2000) {
+      if (!validation.payload) {
         return {
           isValid: false,
-          error: 'トークンの形式が無効です (長さ不正)',
-          errorCode: 'TOKEN_MALFORMED'
-        };
-      }
-
-      // JWT検証
-      let decoded: any;
-      try {
-        decoded = jwt.verify(token, this.tokenSecret) as any;
-      } catch (jwtError) {
-        if (jwtError instanceof jwt.TokenExpiredError) {
-          const expiredAt = new Date(jwtError.expiredAt).toLocaleString('ja-JP');
-          return {
-            isValid: false,
-            error: `トークンが期限切れです (期限: ${expiredAt})`,
-            errorCode: 'TOKEN_EXPIRED'
-          };
-        } else if (jwtError instanceof jwt.JsonWebTokenError) {
-          const errorDetail = jwtError.message.includes('invalid signature') ?
-            '署名が無効' :
-            jwtError.message.includes('malformed') ?
-              '形式が不正' :
-              jwtError.message.includes('invalid token') ?
-                'トークンが不正' :
-                'JWT解析エラー';
-          return {
-            isValid: false,
-            error: `トークンが無効です (${errorDetail})`,
-            errorCode: 'TOKEN_INVALID'
-          };
-        }
-
-        // その他のJWTエラー
-        console.error('JWT verification unexpected error:', jwtError);
-        return {
-          isValid: false,
-          error: `トークン検証中にエラーが発生しました: ${jwtError.message}`,
-          errorCode: 'TOKEN_VERIFICATION_ERROR'
-        };
-      }
-
-      // ペイロード検証
-      if (!decoded.userId || !decoded.username) {
-        return {
-          isValid: false,
-          error: 'トークンのペイロードが不完全です (ユーザー情報不足)',
-          errorCode: 'TOKEN_PAYLOAD_INVALID'
-        };
-      }
-
-      // セッション存在確認
-      const session = await this.findSessionByToken(token);
-      if (!session) {
-        return {
-          isValid: false,
-          error: 'セッションが見つかりません (トークンが無効または削除済み)',
-          errorCode: 'SESSION_NOT_FOUND'
-        };
-      }
-
-      if (!session.isActive) {
-        return {
-          isValid: false,
-          error: 'セッションが無効化されています (ログアウト済みまたは強制終了)',
-          errorCode: 'SESSION_INACTIVE'
-        };
-      }
-
-      // セッション期限確認
-      const now = new Date();
-      if (session.expiresAt < now) {
-        await this.invalidateSession(token);
-        const expiredAgo = Math.floor((now.getTime() - session.expiresAt.getTime()) / (1000 * 60));
-        return {
-          isValid: false,
-          error: `セッションが期限切れです (${expiredAgo}分前に期限切れ)`,
-          errorCode: 'SESSION_EXPIRED'
+          error: 'トークンペイロードが不正です',
+          errorCode: 'INVALID'
         };
       }
 
       // ユーザー存在・アクティブ確認
-      const user = await this.findUserById(decoded.userId);
+      const user = await this.findUserById(validation.payload.userId);
       if (!user) {
-        await this.invalidateSession(token);
         return {
           isValid: false,
-          error: `ユーザーが見つかりません (ユーザーID: ${decoded.userId})`,
+          error: `ユーザーが見つかりません (ユーザーID: ${validation.payload.userId})`,
           errorCode: 'USER_NOT_FOUND'
         };
       }
 
       if (!user.isActive) {
-        await this.invalidateSession(token);
         return {
           isValid: false,
           error: `ユーザーアカウントが無効になっています (ユーザー: ${user.username})`,
@@ -273,15 +199,39 @@ export class AuthService {
         };
       }
 
-      // 最終アクティビティ更新
-      await this.updateSessionActivity(session.id);
+      // セッション確認・更新
+      const session = await this.findSessionByToken(token);
+      if (session) {
+        if (!session.isActive) {
+          return {
+            isValid: false,
+            error: 'セッションが無効化されています',
+            errorCode: 'SESSION_NOT_FOUND'
+          };
+        }
 
-      const expiresInSeconds = Math.floor((session.expiresAt.getTime() - Date.now()) / 1000);
+        // セッション期限確認
+        const now = new Date();
+        if (session.expiresAt < now) {
+          await this.invalidateSession(token);
+          return {
+            isValid: false,
+            error: 'セッションが期限切れです',
+            errorCode: 'SESSION_NOT_FOUND'
+          };
+        }
+
+        // 最終アクティビティ更新
+        await this.updateSessionActivity(session.id);
+      }
+
+      // JWT期限から残り時間を計算
+      const expiresInSeconds = validation.payload.exp - Math.floor(Date.now() / 1000);
 
       return {
         isValid: true,
         user: this.sanitizeUser(user),
-        expiresIn: expiresInSeconds
+        expiresIn: Math.max(0, expiresInSeconds)
       };
 
     } catch (error) {

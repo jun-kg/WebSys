@@ -4,7 +4,9 @@ import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 import { AuthService } from '../services/AuthService';
+import { securityService } from '../services/SecurityService';
 import { authMiddleware, getClientInfo } from '../middleware/auth';
+import { log, LogCategory } from '../utils/logger';
 
 const router = Router();
 const authService = new AuthService();
@@ -71,12 +73,19 @@ router.post(
         res.json({
           success: true,
           data: {
-            token: result.token,
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken,
             user: result.user,
-            expiresIn: result.expiresIn,
+            accessExpiresIn: result.accessExpiresIn,
+            refreshExpiresIn: result.refreshExpiresIn,
             isFirstLogin: result.isFirstLogin,
             requirePasswordChange: result.requirePasswordChange
           }
+        });
+
+        log.info(LogCategory.AUTH, `Login successful: ${username}`, {
+          userId: result.user?.id,
+          ipAddress: clientInfo.ipAddress
         });
       } else {
         res.status(401).json({
@@ -86,9 +95,14 @@ router.post(
             message: result.error
           }
         });
+
+        log.warn(LogCategory.AUTH, `Login failed: ${username}`, {
+          error: result.error,
+          ipAddress: clientInfo.ipAddress
+        });
       }
     } catch (error) {
-      console.error('Login error:', error);
+      log.error(LogCategory.AUTH, 'Login endpoint error', error as Error);
       res.status(500).json({
         success: false,
         error: {
@@ -99,6 +113,65 @@ router.post(
     }
   }
 );
+
+// Refresh Token
+router.post('/refresh', async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'REFRESH_TOKEN_MISSING',
+          message: 'リフレッシュトークンが必要です'
+        }
+      });
+    }
+
+    const clientInfo = getClientInfo(req);
+    const result = await securityService.refreshAccessToken(refreshToken, clientInfo.ipAddress);
+
+    if (result.isValid && result.newAccessToken) {
+      res.json({
+        success: true,
+        data: {
+          accessToken: result.newAccessToken,
+          expiresIn: 15 * 60 // 15分
+        }
+      });
+
+      log.info(LogCategory.AUTH, 'Token refresh successful', {
+        userId: result.payload?.userId,
+        ipAddress: clientInfo.ipAddress
+      });
+    } else {
+      res.status(401).json({
+        success: false,
+        error: {
+          code: 'REFRESH_TOKEN_INVALID',
+          message: result.error || 'リフレッシュトークンが無効です'
+        }
+      });
+
+      log.warn(LogCategory.AUTH, 'Token refresh failed', {
+        error: result.error,
+        errorCode: result.errorCode,
+        ipAddress: clientInfo.ipAddress
+      });
+    }
+
+  } catch (error) {
+    log.error(LogCategory.AUTH, 'Refresh endpoint error', error as Error);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'SYS_001',
+        message: 'システムエラーが発生しました'
+      }
+    });
+  }
+});
 
 // Logout
 router.post('/logout', authMiddleware, async (req, res) => {
@@ -534,5 +607,41 @@ router.post(
     }
   }
 );
+
+// Security Health (Admin only)
+router.get('/security/health', authMiddleware, async (req, res) => {
+  try {
+    // 管理者権限チェック
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'INSUFFICIENT_PERMISSIONS',
+          message: '管理者権限が必要です'
+        }
+      });
+    }
+
+    const health = securityService.getSecurityHealth();
+
+    res.json({
+      success: true,
+      data: {
+        security: health,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    log.error(LogCategory.AUTH, 'Security health endpoint error', error as Error);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'SYS_001',
+        message: 'システムエラーが発生しました'
+      }
+    });
+  }
+});
 
 export default router;

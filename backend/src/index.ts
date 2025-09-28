@@ -3,6 +3,7 @@ import cors from 'cors'
 import morgan from 'morgan'
 import dotenv from 'dotenv'
 import { createServer } from 'http'
+import { applySecurity } from './middleware/security.js'
 import authRoutes from './routes/auth.js'
 import userRoutes from './routes/users.js'
 import companyRoutes from './routes/companies.js'
@@ -31,19 +32,20 @@ const PORT = process.env.PORT || 8000
 // WebSocketサービス初期化
 const webSocketService = initializeWebSocketService(httpServer)
 
-// Middleware
-app.use(cors({
-  origin: [
+// セキュリティミドルウェア適用（最優先）
+applySecurity(app, {
+  corsOrigins: [
     process.env.FRONTEND_URL || "http://localhost:3000",
     "http://localhost:3001",
     "http://localhost:3002",
     "http://localhost:3003"
-  ],
-  credentials: true
-}))
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
-app.use(morgan('dev'))
+  ]
+})
+
+// 基本ミドルウェア
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+app.use(morgan('combined')) // より詳細なログ出力
 
 // Routes
 app.get('/health', (req, res) => {

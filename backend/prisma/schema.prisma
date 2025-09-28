@@ -67,6 +67,7 @@ model companies {
   departments          departments[]
   permission_templates permission_templates[]
   users                users[]
+  security_settings    security_settings[]
   workflow_types       workflow_types[]
   workflow_requests    workflow_requests[]
 
@@ -365,6 +366,8 @@ model users {
   system_messages                                                                system_messages[]
   user_departments                                                               user_departments[]
   user_sessions                                                                  user_sessions[]
+  refresh_tokens                                                                 refresh_tokens[]
+  security_events                                                                security_events[]
   companies                                                                      companies?                       @relation(fields: [companyId], references: [id])
   departments                                                                    departments?                     @relation(fields: [primaryDepartmentId], references: [id])
 
@@ -720,4 +723,83 @@ model auto_approval_logs {
   @@index([ruleId])
   @@index([status])
   @@index([triggeredAt])
+}
+
+// ====================================
+// セキュリティ関連テーブル
+// ====================================
+
+// リフレッシュトークンテーブル
+model refresh_tokens {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  jti         String   @unique // JWT ID
+  tokenHash   String   // トークンのハッシュ
+  expiresAt   DateTime
+  isActive    Boolean  @default(true)
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([jti])
+  @@index([expiresAt])
+  @@index([isActive])
+}
+
+// セキュリティイベントテーブル
+model security_events {
+  id          Int      @id @default(autoincrement())
+  type        String   // LOGIN_SUCCESS, LOGIN_FAILED, TOKEN_REFRESH, LOGOUT, SUSPICIOUS_ACTIVITY
+  userId      Int?
+  ipAddress   String
+  userAgent   String?
+  details     String?  // JSON形式の詳細情報
+  timestamp   DateTime @default(now())
+
+  users       users?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([type])
+  @@index([userId])
+  @@index([ipAddress])
+  @@index([timestamp])
+}
+
+// ログイン試行履歴テーブル
+model login_attempts {
+  id          Int      @id @default(autoincrement())
+  identifier  String   // IP + username
+  attempts    Int      @default(1)
+  lockedUntil DateTime?
+  lastAttempt DateTime @default(now())
+  isLocked    Boolean  @default(false)
+
+  @@index([identifier])
+  @@index([lockedUntil])
+  @@index([isLocked])
+}
+
+// セキュリティ設定テーブル
+model security_settings {
+  id                    Int      @id @default(autoincrement())
+  companyId             Int
+  maxLoginAttempts      Int      @default(5)
+  lockoutDurationMinutes Int     @default(30)
+  passwordMinLength     Int      @default(8)
+  passwordRequireUpper  Boolean  @default(true)
+  passwordRequireLower  Boolean  @default(true)
+  passwordRequireNumber Boolean  @default(true)
+  passwordRequireSymbol Boolean  @default(false)
+  sessionTimeoutMinutes Int      @default(480) // 8時間
+  enableTwoFactor       Boolean  @default(false)
+  allowedIpRanges       String[] // CIDR形式
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  companies             companies @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId])
+  @@index([companyId])
 }
