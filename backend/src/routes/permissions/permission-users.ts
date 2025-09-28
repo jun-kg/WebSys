@@ -358,4 +358,182 @@ async function checkUserPermission(userId: number, featureCode: string, action: 
   });
 }
 
+/**
+ * メニュー権限取得
+ * GET /api/permissions/users/menu
+ */
+router.get('/menu',
+  async (req, res) => {
+    try {
+      const userId = (req as any).user.id;
+      const userRole = (req as any).user.role;
+
+      console.log(`[PermissionUsers] Getting menu permissions for user ${userId}, role ${userRole}`);
+
+      // 管理者は全メニューアクセス可能
+      if (userRole === 'ADMIN') {
+        const allMenuItems = [
+          { path: '/dashboard', name: 'ダッシュボード', hasAccess: true },
+          { path: '/users', name: 'ユーザー管理', hasAccess: true },
+          { path: '/companies', name: '会社管理', hasAccess: true },
+          { path: '/departments', name: '部署管理', hasAccess: true },
+          { path: '/permissions', name: '権限管理', hasAccess: true },
+          { path: '/permissions/matrix', name: '権限マトリクス', hasAccess: true },
+          { path: '/permissions/templates', name: '権限テンプレート', hasAccess: true },
+          { path: '/permissions/inheritance', name: '権限継承', hasAccess: true },
+          { path: '/logs', name: 'ログ監視', hasAccess: true },
+          { path: '/statistics', name: '統計', hasAccess: true },
+          { path: '/reports', name: 'レポート', hasAccess: true },
+          { path: '/workflow', name: 'ワークフロー', hasAccess: true },
+          { path: '/approval', name: '承認管理', hasAccess: true }
+        ];
+
+        return res.json({
+          success: true,
+          data: {
+            menuItems: allMenuItems
+          },
+          meta: {
+            timestamp: new Date().toISOString(),
+            requestId: req.headers['x-request-id']
+          }
+        });
+      }
+
+      // 一般ユーザーの場合、所属部署の権限をチェック
+      const user = await prisma.users.findUnique({
+        where: { id: userId },
+        include: {
+          user_departments: {
+            where: { expiredDate: null },
+            select: { departmentId: true }
+          }
+        }
+      });
+
+      if (!user || user.user_departments.length === 0) {
+        return res.json({
+          success: true,
+          data: {
+            menuItems: [
+              { path: '/dashboard', name: 'ダッシュボード', hasAccess: true }
+            ]
+          }
+        });
+      }
+
+      const departmentIds = user.user_departments.map(ud => ud.departmentId);
+
+      // 部署の権限を取得
+      const departmentPermissions = await prisma.department_feature_permissions.findMany({
+        where: {
+          departmentId: { in: departmentIds }
+        },
+        include: {
+          features: {
+            select: { id: true, code: true, name: true, category: true }
+          }
+        }
+      });
+
+      // メニューアクセス権限を計算
+      const menuItems = [
+        {
+          path: '/dashboard',
+          name: 'ダッシュボード',
+          hasAccess: true // 全ユーザーアクセス可能
+        },
+        {
+          path: '/users',
+          name: 'ユーザー管理',
+          hasAccess: hasFeaturePermission(departmentPermissions, 'user_management', 'canView')
+        },
+        {
+          path: '/companies',
+          name: '会社管理',
+          hasAccess: hasFeaturePermission(departmentPermissions, 'company_management', 'canView')
+        },
+        {
+          path: '/departments',
+          name: '部署管理',
+          hasAccess: hasFeaturePermission(departmentPermissions, 'department_management', 'canView')
+        },
+        {
+          path: '/permissions',
+          name: '権限管理',
+          hasAccess: hasFeaturePermission(departmentPermissions, 'permission_management', 'canView')
+        },
+        {
+          path: '/permissions/matrix',
+          name: '権限マトリクス',
+          hasAccess: hasFeaturePermission(departmentPermissions, 'permission_management', 'canView')
+        },
+        {
+          path: '/permissions/templates',
+          name: '権限テンプレート',
+          hasAccess: hasFeaturePermission(departmentPermissions, 'permission_management', 'canView')
+        },
+        {
+          path: '/permissions/inheritance',
+          name: '権限継承',
+          hasAccess: hasFeaturePermission(departmentPermissions, 'permission_management', 'canView')
+        },
+        {
+          path: '/logs',
+          name: 'ログ監視',
+          hasAccess: hasFeaturePermission(departmentPermissions, 'log_management', 'canView')
+        },
+        {
+          path: '/statistics',
+          name: '統計',
+          hasAccess: hasFeaturePermission(departmentPermissions, 'statistics_view', 'canView')
+        },
+        {
+          path: '/reports',
+          name: 'レポート',
+          hasAccess: hasFeaturePermission(departmentPermissions, 'report_management', 'canView')
+        },
+        {
+          path: '/workflow',
+          name: 'ワークフロー',
+          hasAccess: hasFeaturePermission(departmentPermissions, 'workflow_management', 'canView')
+        },
+        {
+          path: '/approval',
+          name: '承認管理',
+          hasAccess: hasFeaturePermission(departmentPermissions, 'approval_management', 'canView')
+        }
+      ];
+
+      res.json({
+        success: true,
+        data: {
+          menuItems: menuItems.filter(item => item.hasAccess)
+        },
+        meta: {
+          timestamp: new Date().toISOString(),
+          requestId: req.headers['x-request-id']
+        }
+      });
+    } catch (error) {
+      console.error('[PermissionUsers] Error fetching menu permissions:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'サーバー内部エラーが発生しました'
+        }
+      });
+    }
+  }
+);
+
+// ヘルパー関数
+function hasFeaturePermission(permissions: any[], featureCode: string, permissionType: string): boolean {
+  const permission = permissions.find(p => p.features.code === featureCode);
+  if (!permission) return false;
+
+  return permission[permissionType] || false;
+}
+
 export default router;

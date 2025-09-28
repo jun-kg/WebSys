@@ -20,6 +20,7 @@ import permissionValidationRouter from './permission-validation';
 import { authMiddleware } from '../../middleware/auth';
 import { performanceMonitor } from '../../middleware/performanceMonitor';
 import { featureFlags } from '../../utils/featureFlags';
+import { prisma } from '../../lib/prisma';
 
 const router = Router();
 
@@ -121,6 +122,63 @@ class LegacyPermissionsAPIWrapper {
     }
   }
 }
+
+// メニュー権限エンドポイント（直接ルーティング）
+router.get('/menu', async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const userRole = (req as any).user.role;
+
+    console.log(`[Permissions] Getting menu permissions for user ${userId}, role ${userRole}`);
+
+    // 管理者は全メニューアクセス可能
+    if (userRole === 'ADMIN') {
+      const allMenuItems = [
+        { path: '/dashboard', name: 'ダッシュボード', hasAccess: true },
+        { path: '/users', name: 'ユーザー管理', hasAccess: true },
+        { path: '/companies', name: '会社管理', hasAccess: true },
+        { path: '/departments', name: '部署管理', hasAccess: true },
+        { path: '/permissions', name: '権限管理', hasAccess: true },
+        { path: '/permissions/matrix', name: '権限マトリクス', hasAccess: true },
+        { path: '/permissions/templates', name: '権限テンプレート', hasAccess: true },
+        { path: '/permissions/inheritance', name: '権限継承', hasAccess: true },
+        { path: '/logs', name: 'ログ監視', hasAccess: true },
+        { path: '/statistics', name: '統計', hasAccess: true },
+        { path: '/reports', name: 'レポート', hasAccess: true },
+        { path: '/workflow', name: 'ワークフロー', hasAccess: true },
+        { path: '/approval', name: '承認管理', hasAccess: true }
+      ];
+
+      return res.json({
+        success: true,
+        data: {
+          menuItems: allMenuItems
+        }
+      });
+    }
+
+    // 一般ユーザーの場合、基本メニューのみアクセス可能
+    const basicMenuItems = [
+      { path: '/dashboard', name: 'ダッシュボード', hasAccess: true }
+    ];
+
+    res.json({
+      success: true,
+      data: {
+        menuItems: basicMenuItems
+      }
+    });
+  } catch (error) {
+    console.error('[Permissions] Error fetching menu permissions:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'サーバー内部エラーが発生しました'
+      }
+    });
+  }
+});
 
 // レガシー互換性ルート（段階的移行中のみ）
 if (!featureFlags.isFullyMigrated()) {
