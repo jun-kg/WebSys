@@ -16,6 +16,7 @@
     "@fontsource/biz-udgothic": "^5.2.7",
     "@fontsource/biz-udpgothic": "^5.2.8",
     "@types/d3": "^7.4.3",
+    "@vueuse/core": "^13.9.0",
     "axios": "^1.6.5",
     "d3": "^7.9.0",
     "echarts": "^6.0.0",
