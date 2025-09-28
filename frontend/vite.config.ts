@@ -37,10 +37,18 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 3000,
+    fs: {
+      allow: [
+        // フォントファイルアクセス許可
+        '/home/typho/src/elementplus/websys/workspace',
+        '/home/typho/src/elementplus/websys/node_modules'
+      ]
+    },
     proxy: {
       '/api': {
-        target: 'http://backend:8000',
-        changeOrigin: true
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false
       }
     }
   }
