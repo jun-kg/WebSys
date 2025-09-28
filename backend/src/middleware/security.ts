@@ -119,13 +119,6 @@ export const securityHeaders = (config: Partial<SecurityConfig> = {}) => {
       policy: 'strict-origin-when-cross-origin'
     },
 
-    // Permissions Policy
-    permissionsPolicy: {
-      camera: [],
-      microphone: [],
-      geolocation: [],
-      payment: []
-    },
 
     // Hide X-Powered-By
     hidePoweredBy: true,
@@ -151,11 +144,6 @@ export const securityHeaders = (config: Partial<SecurityConfig> = {}) => {
       allow: false
     },
 
-    // Expect-CT (廃止予定だが互換性のため)
-    expectCt: {
-      maxAge: 86400, // 24時間
-      enforce: process.env.NODE_ENV === 'production'
-    }
   });
 };
 
@@ -210,15 +198,6 @@ export const generalRateLimit = (config: Partial<SecurityConfig> = {}) => {
     },
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => {
-      // IPv6/IPv4アドレスの正規化
-      const ip = req.ip || req.connection.remoteAddress || 'unknown';
-      if (ip.includes('::ffff:')) {
-        // IPv4-mapped IPv6アドレスをIPv4に変換
-        return ip.replace('::ffff:', '');
-      }
-      return ip;
-    },
     handler: (req, res, next) => {
       log.security('Rate limit exceeded', {
         ip: req.ip,
@@ -256,14 +235,8 @@ export const authRateLimit = (config: Partial<SecurityConfig> = {}) => {
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => {
-      // IPv6/IPv4アドレスの正規化
-      let ip = req.ip || req.connection.remoteAddress || 'unknown';
-      if (ip.includes('::ffff:')) {
-        // IPv4-mapped IPv6アドレスをIPv4に変換
-        ip = ip.replace('::ffff:', '');
-      }
       const username = req.body?.username || 'unknown';
-      return `auth:${ip}:${username}`;
+      return `auth:${req.ip}:${username}`;
     },
     handler: (req, res, next) => {
       log.security('Auth rate limit exceeded', {
