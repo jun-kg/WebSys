@@ -1,0 +1,8 @@
+export { default as PermissionMatrixHeader } from './PermissionMatrixHeader.vue'
+export { default as PermissionMatrixGrid } from './PermissionMatrixGrid.vue'
+export { default as PermissionRolePanel } from './PermissionRolePanel.vue'
+export { default as PermissionUserPanel } from './PermissionUserPanel.vue'
+export { default as PermissionTemplatePanel } from './PermissionTemplatePanel.vue'
+export { default as PermissionInheritancePanel } from './PermissionInheritancePanel.vue'
+export { default as PermissionAuditPanel } from './PermissionAuditPanel.vue'
+export { default as PermissionExportDialog } from './PermissionExportDialog.vue'
