@@ -90,6 +90,18 @@ export interface ApplyPermissionTemplateRequest {
   departmentIds: number[]
 }
 
+export interface MenuPermission {
+  path: string
+  featureCode: string
+  hasAccess: boolean
+}
+
+export interface MenuPermissionsResponse {
+  menuItems: MenuPermission[]
+  userRole?: string
+  departments?: number[]
+}
+
 /**
  * 部署権限取得
  */
@@ -201,6 +213,14 @@ export async function deletePermissionTemplate(templateId: number) {
 }
 
 /**
+ * メニュー表示権限取得
+ */
+export async function getMenuPermissions() {
+  const response = await api.get('/permissions/menu')
+  return response.data as { success: boolean; data: MenuPermissionsResponse }
+}
+
+/**
  * 権限管理API集約オブジェクト
  */
 export const permissionAPI = {
@@ -215,5 +235,6 @@ export const permissionAPI = {
   createPermissionTemplate,
   updatePermissionTemplate,
   applyPermissionTemplate,
-  deletePermissionTemplate
+  deletePermissionTemplate,
+  getMenuPermissions
 }

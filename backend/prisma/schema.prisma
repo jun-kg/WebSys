@@ -475,6 +475,7 @@ model workflow_types {
   approval_routes     approval_routes[]
   workflow_requests   workflow_requests[]
   approval_delegates  approval_delegates[]
+  auto_approval_rules auto_approval_rules[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -491,8 +492,14 @@ model approval_routes {
   approverValue       Json                   // 承認者指定（JSON）
   requiredCount       Int                    @default(1)
   isParallel          Boolean                @default(false)
+  parallelType        String?                // AND, OR
+  minimumApprovals    Int                    @default(1)
+  isSequential        Boolean                @default(false) // 直列承認フラグ
+  sequentialOrder     Json?                  // 直列承認順序（承認者ID配列）
+  currentSequenceStep Int?                   // 現在の直列ステップ（0から開始）
   canSkip             Boolean                @default(false)
   autoApproveHours    Int?                   // 自動承認までの時間
+  autoApprovalRules   Json?                  // 自動承認ルール（JSON）
   condition           Json?                  // 適用条件（JSON）
   isActive            Boolean                @default(true)
   createdAt           DateTime               @default(now())
@@ -543,6 +550,7 @@ model workflow_requests {
   approval_history    approval_history[]
   workflow_notifications workflow_notifications[]
   workflow_attachments workflow_attachments[]
+  auto_approval_logs  auto_approval_logs[]
 
   @@index([workflowTypeId])
   @@index([companyId])
@@ -573,6 +581,8 @@ model approval_history {
   isNotified          Boolean                @default(false)
   isProxy             Boolean                @default(false)
   proxyReason         String?
+  sequenceStep        Int?                   // 直列承認でのステップ番号
+  isSequential        Boolean                @default(false) // 直列承認かどうか
   createdAt           DateTime               @default(now())
 
   workflow_requests   workflow_requests      @relation(fields: [requestId], references: [id], onDelete: Cascade)
@@ -664,4 +674,50 @@ model workflow_attachments {
   @@index([requestId])
   @@index([uploadedBy])
   @@index([isDeleted])
+}
+
+// 自動承認ルールテーブル
+model auto_approval_rules {
+  id                  Int                    @id @default(autoincrement())
+  workflowTypeId      Int
+  stepNumber          Int?                   // nullの場合は全ステップ対象
+  ruleType            String                 // TIME_BASED, AMOUNT_BASED, ROLE_BASED, CONDITION_BASED
+  ruleName            String
+  description         String?
+  conditions          Json                   // 条件設定（JSON）
+  autoApproveAfter    Int?                   // 自動承認までの時間（分）
+  maxAmount           Decimal?               // 金額上限
+  applicableRoles     Json?                  // 適用可能な役職（配列）
+  priority            Int                    @default(0)
+  isActive            Boolean                @default(true)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  workflow_types      workflow_types         @relation(fields: [workflowTypeId], references: [id], onDelete: Cascade)
+  auto_approval_logs  auto_approval_logs[]
+
+  @@index([workflowTypeId])
+  @@index([ruleType])
+  @@index([isActive])
+}
+
+// 自動承認ログテーブル
+model auto_approval_logs {
+  id                  Int                    @id @default(autoincrement())
+  requestId           Int
+  ruleId              Int
+  ruleName            String
+  ruleType            String
+  triggeredAt         DateTime               @default(now())
+  appliedAt           DateTime?              // 実際に適用された時刻
+  status              String                 @default("PENDING") // PENDING, APPLIED, CANCELLED, FAILED
+  reason              String?                // 適用・キャンセル理由
+  systemUserId        Int?                   // システムユーザーID
+  metadata            Json?                  // メタデータ（JSON）
+  workflow_requests   workflow_requests      @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  auto_approval_rules auto_approval_rules    @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([ruleId])
+  @@index([status])
+  @@index([triggeredAt])
 }

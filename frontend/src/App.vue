@@ -1,14 +1,12 @@
 <template>
-  <el-config-provider :locale="locale">
-    <router-view />
-  </el-config-provider>
+  <router-view />
 </template>
 
 <script setup lang="ts">
-import { ElConfigProvider } from 'element-plus'
-import ja from 'element-plus/dist/locale/ja.mjs'
+// import { ElConfigProvider } from 'element-plus' // 削除（templateで使用しない）
+// import ja from 'element-plus/dist/locale/ja.mjs' // ロケールインポートを削除
 
-const locale = ja
+// const locale = ja // ロケールを削除
 </script>
 
 <style>

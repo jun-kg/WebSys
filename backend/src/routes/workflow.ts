@@ -4,6 +4,9 @@ import { WorkflowService } from '../services/WorkflowService';
 import { EmergencyApprovalService } from '../services/EmergencyApprovalService';
 import { ApprovalDelegationService } from '../services/ApprovalDelegationService';
 import { ProxyApprovalService } from '../services/ProxyApprovalService';
+import { ParallelApprovalService } from '../services/ParallelApprovalService';
+import { SequentialApprovalService } from '../services/SequentialApprovalService';
+import { AutoApprovalService } from '../services/AutoApprovalService';
 import { authenticate, requireRole } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 import {
@@ -19,6 +22,9 @@ const workflowService = new WorkflowService();
 const emergencyApprovalService = new EmergencyApprovalService();
 const delegationService = new ApprovalDelegationService();
 const proxyApprovalService = new ProxyApprovalService();
+const parallelApprovalService = new ParallelApprovalService();
+const sequentialApprovalService = new SequentialApprovalService();
+const autoApprovalService = new AutoApprovalService();
 
 // ============ ワークフロータイプ管理 ============
 
@@ -1013,6 +1019,597 @@ router.get('/proxy-approvals/statistics',
     } catch (error) {
       console.error('代理承認統計取得エラー:', error);
       res.status(500).json({ success: false, error: '代理承認統計の取得に失敗しました' });
+    }
+  }
+);
+
+// ============ 並列承認管理 ============
+
+// 並列承認実行
+router.post('/parallel-approval',
+  authenticate,
+  [
+    body('requestId').isInt().withMessage('申請IDは数値である必要があります'),
+    body('stepNumber').isInt().withMessage('ステップ番号は数値である必要があります'),
+    body('action').isIn(['APPROVE', 'REJECT', 'RETURN']).withMessage('アクションは APPROVE, REJECT, RETURN のいずれかである必要があります'),
+    body('comment').optional().isString().withMessage('コメントは文字列である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { requestId, stepNumber, action, comment, attachments } = req.body;
+      const approverId = req.user.id;
+
+      const result = await parallelApprovalService.executeParallelApproval({
+        requestId,
+        stepNumber,
+        approverId,
+        action,
+        comment,
+        attachments
+      });
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('並列承認実行エラー:', error);
+      res.status(500).json({ success: false, error: error.message || '並列承認の実行に失敗しました' });
+    }
+  }
+);
+
+// 並列承認状況取得
+router.get('/parallel-approval/status/:requestId/:stepNumber',
+  authenticate,
+  [
+    param('requestId').isInt().withMessage('申請IDは数値である必要があります'),
+    param('stepNumber').isInt().withMessage('ステップ番号は数値である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { requestId, stepNumber } = req.params;
+
+      const result = await parallelApprovalService.getParallelApprovalStatus(
+        Number(requestId),
+        Number(stepNumber)
+      );
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('並列承認状況取得エラー:', error);
+      res.status(500).json({ success: false, error: '並列承認状況の取得に失敗しました' });
+    }
+  }
+);
+
+// 並列承認待ちユーザー取得
+router.get('/parallel-approval/pending/:requestId/:stepNumber',
+  authenticate,
+  [
+    param('requestId').isInt().withMessage('申請IDは数値である必要があります'),
+    param('stepNumber').isInt().withMessage('ステップ番号は数値である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { requestId, stepNumber } = req.params;
+
+      const result = await parallelApprovalService.getPendingApprovers(
+        Number(requestId),
+        Number(stepNumber)
+      );
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('並列承認待ちユーザー取得エラー:', error);
+      res.status(500).json({ success: false, error: '並列承認待ちユーザーの取得に失敗しました' });
+    }
+  }
+);
+
+// 並列承認履歴取得
+router.get('/parallel-approvals',
+  authenticate,
+  [
+    query('page').optional().isInt({ min: 1 }).withMessage('ページは1以上の整数である必要があります'),
+    query('pageSize').optional().isInt({ min: 1, max: 100 }).withMessage('ページサイズは1-100の整数である必要があります'),
+    query('requestId').optional().isInt().withMessage('申請IDは数値である必要があります'),
+    query('stepNumber').optional().isInt().withMessage('ステップ番号は数値である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { page, pageSize, requestId, stepNumber, startDate, endDate } = req.query;
+      const companyId = req.user.companyId;
+
+      const result = await parallelApprovalService.getParallelApprovalHistory(companyId, {
+        page: page ? Number(page) : 1,
+        pageSize: pageSize ? Number(pageSize) : 20,
+        requestId: requestId ? Number(requestId) : undefined,
+        stepNumber: stepNumber ? Number(stepNumber) : undefined,
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined
+      });
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('並列承認履歴取得エラー:', error);
+      res.status(500).json({ success: false, error: '並列承認履歴の取得に失敗しました' });
+    }
+  }
+);
+
+// 並列承認統計取得
+router.get('/parallel-approvals/statistics',
+  authenticate,
+  [
+    query('days').optional().isInt({ min: 1, max: 365 }).withMessage('日数は1-365の整数である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { days } = req.query;
+      const companyId = req.user.companyId;
+
+      const result = await parallelApprovalService.getParallelApprovalStatistics(
+        companyId,
+        days ? Number(days) : 30
+      );
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('並列承認統計取得エラー:', error);
+      res.status(500).json({ success: false, error: '並列承認統計の取得に失敗しました' });
+    }
+  }
+);
+
+// ============ 直列承認管理 ============
+
+// 直列承認実行
+router.post('/sequential-approval',
+  authenticate,
+  [
+    body('requestId').isInt().withMessage('申請IDは整数である必要があります'),
+    body('stepNumber').isInt().withMessage('ステップ番号は整数である必要があります'),
+    body('approverId').isInt().withMessage('承認者IDは整数である必要があります'),
+    body('action').isIn(['APPROVE', 'REJECT', 'RETURN']).withMessage('無効なアクションです'),
+    body('comment').optional().isString().withMessage('コメントは文字列である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { requestId, stepNumber, approverId, action, comment, attachments } = req.body;
+
+      const result = await sequentialApprovalService.executeSequentialApproval({
+        requestId,
+        stepNumber,
+        approverId,
+        action,
+        comment,
+        attachments
+      });
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('直列承認実行エラー:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+);
+
+// 直列承認ステータス取得
+router.get('/sequential-approval/status/:requestId/:stepNumber',
+  authenticate,
+  [
+    param('requestId').isInt().withMessage('申請IDは整数である必要があります'),
+    param('stepNumber').isInt().withMessage('ステップ番号は整数である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const requestId = Number(req.params.requestId);
+      const stepNumber = Number(req.params.stepNumber);
+
+      const result = await sequentialApprovalService.getSequentialApprovalStatus(requestId, stepNumber);
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('直列承認ステータス取得エラー:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+);
+
+// 次の承認者取得
+router.get('/sequential-approval/next-approver/:requestId/:stepNumber',
+  authenticate,
+  [
+    param('requestId').isInt().withMessage('申請IDは整数である必要があります'),
+    param('stepNumber').isInt().withMessage('ステップ番号は整数である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const requestId = Number(req.params.requestId);
+      const stepNumber = Number(req.params.stepNumber);
+
+      const result = await sequentialApprovalService.getNextApprover(requestId, stepNumber);
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('次の承認者取得エラー:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+);
+
+// 直列承認履歴一覧取得
+router.get('/sequential-approvals',
+  authenticate,
+  [
+    query('page').optional().isInt({ min: 1 }).withMessage('ページは1以上の整数である必要があります'),
+    query('pageSize').optional().isInt({ min: 1, max: 100 }).withMessage('ページサイズは1-100の整数である必要があります'),
+    query('requestId').optional().isInt().withMessage('申請IDは整数である必要があります'),
+    query('approverId').optional().isInt().withMessage('承認者IDは整数である必要があります'),
+    query('startDate').optional().isISO8601().withMessage('開始日は有効な日付である必要があります'),
+    query('endDate').optional().isISO8601().withMessage('終了日は有効な日付である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { page, pageSize, requestId, approverId, startDate, endDate } = req.query;
+      const companyId = req.user.companyId;
+
+      const result = await sequentialApprovalService.getSequentialApprovalHistory(companyId, {
+        page: page ? Number(page) : 1,
+        pageSize: pageSize ? Number(pageSize) : 20,
+        requestId: requestId ? Number(requestId) : undefined,
+        approverId: approverId ? Number(approverId) : undefined,
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined
+      });
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('直列承認履歴取得エラー:', error);
+      res.status(500).json({ success: false, error: '直列承認履歴の取得に失敗しました' });
+    }
+  }
+);
+
+// 直列承認統計取得
+router.get('/sequential-approvals/statistics',
+  authenticate,
+  [
+    query('days').optional().isInt({ min: 1, max: 365 }).withMessage('日数は1-365の整数である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { days } = req.query;
+      const companyId = req.user.companyId;
+
+      const result = await sequentialApprovalService.getSequentialApprovalStatistics(
+        companyId,
+        days ? Number(days) : 30
+      );
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('直列承認統計取得エラー:', error);
+      res.status(500).json({ success: false, error: '直列承認統計の取得に失敗しました' });
+    }
+  }
+);
+
+// ============ 自動承認管理 ============
+
+// 自動承認ルール作成
+router.post('/auto-approval-rules',
+  authenticate,
+  requireRole(['ADMIN']),
+  [
+    body('workflowTypeId').isInt().withMessage('ワークフロータイプIDは整数である必要があります'),
+    body('stepNumber').optional().isInt().withMessage('ステップ番号は整数である必要があります'),
+    body('ruleType').isIn(['TIME_BASED', 'AMOUNT_BASED', 'ROLE_BASED', 'CONDITION_BASED']).withMessage('無効なルールタイプです'),
+    body('ruleName').isString().isLength({ min: 1, max: 100 }).withMessage('ルール名は1-100文字である必要があります'),
+    body('description').optional().isString().withMessage('説明は文字列である必要があります'),
+    body('conditions').isObject().withMessage('条件はオブジェクトである必要があります'),
+    body('autoApproveAfter').optional().isInt({ min: 1 }).withMessage('自動承認時間は1以上である必要があります'),
+    body('maxAmount').optional().isNumeric().withMessage('金額上限は数値である必要があります'),
+    body('applicableRoles').optional().isArray().withMessage('適用役職は配列である必要があります'),
+    body('priority').optional().isInt().withMessage('優先度は整数である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const result = await autoApprovalService.createAutoApprovalRule(req.body);
+
+      res.status(201).json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('自動承認ルール作成エラー:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+);
+
+// 自動承認ルール一覧取得
+router.get('/auto-approval-rules',
+  authenticate,
+  [
+    query('workflowTypeId').optional().isInt().withMessage('ワークフロータイプIDは整数である必要があります'),
+    query('ruleType').optional().isIn(['TIME_BASED', 'AMOUNT_BASED', 'ROLE_BASED', 'CONDITION_BASED']).withMessage('無効なルールタイプです'),
+    query('isActive').optional().isBoolean().withMessage('アクティブフラグはブール値である必要があります'),
+    query('page').optional().isInt({ min: 1 }).withMessage('ページは1以上の整数である必要があります'),
+    query('pageSize').optional().isInt({ min: 1, max: 100 }).withMessage('ページサイズは1-100の整数である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { workflowTypeId, ruleType, isActive, page, pageSize } = req.query;
+      const companyId = req.user.companyId;
+
+      const result = await autoApprovalService.getAutoApprovalRules(companyId, {
+        workflowTypeId: workflowTypeId ? Number(workflowTypeId) : undefined,
+        ruleType: ruleType as string,
+        isActive: isActive ? isActive === 'true' : undefined,
+        page: page ? Number(page) : 1,
+        pageSize: pageSize ? Number(pageSize) : 20
+      });
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('自動承認ルール一覧取得エラー:', error);
+      res.status(500).json({ success: false, error: '自動承認ルール一覧の取得に失敗しました' });
+    }
+  }
+);
+
+// 自動承認ルール更新
+router.put('/auto-approval-rules/:id',
+  authenticate,
+  requireRole(['ADMIN']),
+  [
+    param('id').isInt().withMessage('ルールIDは整数である必要があります'),
+    body('ruleName').optional().isString().isLength({ min: 1, max: 100 }).withMessage('ルール名は1-100文字である必要があります'),
+    body('description').optional().isString().withMessage('説明は文字列である必要があります'),
+    body('conditions').optional().isObject().withMessage('条件はオブジェクトである必要があります'),
+    body('autoApproveAfter').optional().isInt({ min: 1 }).withMessage('自動承認時間は1以上である必要があります'),
+    body('maxAmount').optional().isNumeric().withMessage('金額上限は数値である必要があります'),
+    body('applicableRoles').optional().isArray().withMessage('適用役職は配列である必要があります'),
+    body('priority').optional().isInt().withMessage('優先度は整数である必要があります'),
+    body('isActive').optional().isBoolean().withMessage('アクティブフラグはブール値である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const ruleId = Number(req.params.id);
+      const result = await autoApprovalService.updateAutoApprovalRule(ruleId, req.body);
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('自動承認ルール更新エラー:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+);
+
+// 自動承認ルール削除
+router.delete('/auto-approval-rules/:id',
+  authenticate,
+  requireRole(['ADMIN']),
+  [
+    param('id').isInt().withMessage('ルールIDは整数である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const ruleId = Number(req.params.id);
+      const result = await autoApprovalService.deleteAutoApprovalRule(ruleId);
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('自動承認ルール削除エラー:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+);
+
+// 申請の自動承認チェック
+router.get('/auto-approval/check/:requestId',
+  authenticate,
+  [
+    param('requestId').isInt().withMessage('申請IDは整数である必要があります'),
+    query('stepNumber').optional().isInt().withMessage('ステップ番号は整数である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const requestId = Number(req.params.requestId);
+      const stepNumber = req.query.stepNumber ? Number(req.query.stepNumber) : undefined;
+
+      const result = await autoApprovalService.checkAutoApproval(requestId, stepNumber);
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('自動承認チェックエラー:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+);
+
+// 自動承認実行
+router.post('/auto-approval/execute',
+  authenticate,
+  requireRole(['ADMIN']),
+  [
+    body('requestId').isInt().withMessage('申請IDは整数である必要があります'),
+    body('ruleId').isInt().withMessage('ルールIDは整数である必要があります'),
+    body('ruleName').isString().withMessage('ルール名は文字列である必要があります'),
+    body('ruleType').isString().withMessage('ルールタイプは文字列である必要があります'),
+    body('reason').isString().withMessage('理由は文字列である必要があります'),
+    body('metadata').optional().isObject().withMessage('メタデータはオブジェクトである必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { requestId, ruleId, ruleName, ruleType, reason, metadata } = req.body;
+
+      const result = await autoApprovalService.executeAutoApproval({
+        requestId,
+        ruleId,
+        ruleName,
+        ruleType,
+        reason,
+        systemUserId: req.user.id,
+        metadata
+      });
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('自動承認実行エラー:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+);
+
+// 自動承認ログ一覧取得
+router.get('/auto-approval-logs',
+  authenticate,
+  [
+    query('requestId').optional().isInt().withMessage('申請IDは整数である必要があります'),
+    query('ruleId').optional().isInt().withMessage('ルールIDは整数である必要があります'),
+    query('status').optional().isIn(['PENDING', 'APPLIED', 'CANCELLED', 'FAILED']).withMessage('無効なステータスです'),
+    query('startDate').optional().isISO8601().withMessage('開始日は有効な日付である必要があります'),
+    query('endDate').optional().isISO8601().withMessage('終了日は有効な日付である必要があります'),
+    query('page').optional().isInt({ min: 1 }).withMessage('ページは1以上の整数である必要があります'),
+    query('pageSize').optional().isInt({ min: 1, max: 100 }).withMessage('ページサイズは1-100の整数である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { requestId, ruleId, status, startDate, endDate, page, pageSize } = req.query;
+      const companyId = req.user.companyId;
+
+      const result = await autoApprovalService.getAutoApprovalLogs(companyId, {
+        requestId: requestId ? Number(requestId) : undefined,
+        ruleId: ruleId ? Number(ruleId) : undefined,
+        status: status as string,
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+        page: page ? Number(page) : 1,
+        pageSize: pageSize ? Number(pageSize) : 20
+      });
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('自動承認ログ取得エラー:', error);
+      res.status(500).json({ success: false, error: '自動承認ログの取得に失敗しました' });
+    }
+  }
+);
+
+// 自動承認統計取得
+router.get('/auto-approval/statistics',
+  authenticate,
+  [
+    query('days').optional().isInt({ min: 1, max: 365 }).withMessage('日数は1-365の整数である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { days } = req.query;
+      const companyId = req.user.companyId;
+
+      const result = await autoApprovalService.getAutoApprovalStatistics(
+        companyId,
+        days ? Number(days) : 30
+      );
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('自動承認統計取得エラー:', error);
+      res.status(500).json({ success: false, error: '自動承認統計の取得に失敗しました' });
+    }
+  }
+);
+
+// 一括自動承認処理（バッチ処理）
+router.post('/auto-approval/batch-process',
+  authenticate,
+  requireRole(['ADMIN']),
+  [
+    body('workflowTypeId').optional().isInt().withMessage('ワークフロータイプIDは整数である必要があります')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { workflowTypeId } = req.body;
+
+      const result = await autoApprovalService.processPendingRequests(workflowTypeId);
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('一括自動承認処理エラー:', error);
+      res.status(500).json({ success: false, error: '一括自動承認処理に失敗しました' });
     }
   }
 );

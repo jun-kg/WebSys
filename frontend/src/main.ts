@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+// import zhCn from 'element-plus/es/locale/lang/zh-cn' // コメントアウト（必要に応じて使用）
 
 // BIZ UDゴシックフォントをローカルで読み込み
 import '@fontsource/biz-udgothic/400.css'
@@ -24,7 +25,7 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 
 app.use(pinia)
 app.use(router)
-app.use(ElementPlus, { locale: 'ja' })
+app.use(ElementPlus) // localeオプションを一時的に削除
 
 // Initialize authentication on app startup
 const authStore = useAuthStore()

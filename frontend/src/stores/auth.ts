@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi } from '@/api/auth'
+import { getMenuPermissions, type MenuPermission } from '@/api/permissions'
 import type {
   User,
   LoginRequest,
@@ -15,6 +16,7 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const isLoading = ref(false)
   const loginFailureCount = ref(0)
+  const menuPermissions = ref<MenuPermission[]>([])
 
   // Computed properties
   const isAuthenticated = computed(() => !!token.value && !!user.value)
@@ -37,6 +39,7 @@ export const useAuthStore = defineStore('auth', () => {
   const clearAuth = () => {
     token.value = null
     user.value = null
+    menuPermissions.value = []
     localStorage.removeItem('token')
     localStorage.removeItem('user')
   }
@@ -50,6 +53,9 @@ export const useAuthStore = defineStore('auth', () => {
         setToken(response.data.token)
         setUser(response.data.user)
         loginFailureCount.value = 0
+
+        // メニュー権限を取得
+        await loadMenuPermissions()
 
         ElMessage.success('ログインしました')
         return true
@@ -96,6 +102,8 @@ export const useAuthStore = defineStore('auth', () => {
 
       if (response.success && response.data) {
         setUser(response.data.user)
+        // メニュー権限も更新
+        await loadMenuPermissions()
         return true
       } else {
         clearAuth()
@@ -120,6 +128,9 @@ export const useAuthStore = defineStore('auth', () => {
         const isValid = await verifyToken()
         if (!isValid) {
           clearAuth()
+        } else {
+          // 有効な場合はメニュー権限を読み込み
+          await loadMenuPermissions()
         }
       } catch (error) {
         console.error('Auth initialization error:', error)
@@ -152,12 +163,42 @@ export const useAuthStore = defineStore('auth', () => {
     return user.value?.name || user.value?.username || 'ユーザー'
   }
 
+  const loadMenuPermissions = async (): Promise<void> => {
+    if (!token.value) return
+
+    try {
+      const response = await getMenuPermissions()
+      if (response.success && response.data) {
+        menuPermissions.value = response.data.menuItems
+      }
+    } catch (error) {
+      console.error('Failed to load menu permissions:', error)
+      menuPermissions.value = []
+    }
+  }
+
+  const hasMenuAccess = (path: string): boolean => {
+    if (!user.value) return false
+
+    // 管理者は全てのメニューにアクセス可能
+    if (user.value.role === 'ADMIN') return true
+
+    // メニュー権限をチェック
+    const menuItem = menuPermissions.value.find(item => item.path === path)
+    return menuItem?.hasAccess || false
+  }
+
+  const getAccessibleMenuItems = () => {
+    return menuPermissions.value.filter(item => item.hasAccess)
+  }
+
   return {
     // State
     token,
     user,
     isLoading,
     loginFailureCount,
+    menuPermissions,
 
     // Computed
     isAuthenticated,
@@ -175,6 +216,9 @@ export const useAuthStore = defineStore('auth', () => {
     setUser,
     clearAuth,
     hasPermission,
-    getDisplayName
+    getDisplayName,
+    loadMenuPermissions,
+    hasMenuAccess,
+    getAccessibleMenuItems
   }
 })
