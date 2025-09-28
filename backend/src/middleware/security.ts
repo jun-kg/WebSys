@@ -92,17 +92,7 @@ export const securityHeaders = (config: Partial<SecurityConfig> = {}) => {
   return helmet({
     // Content Security Policy
     contentSecurityPolicy: {
-      directives: {
-        ...finalConfig.cspDirectives,
-        // より厳格なCSP設定
-        'script-src-attr': ["'none'"],
-        'object-src': ["'none'"],
-        'base-uri': ["'self'"],
-        'form-action': ["'self'"],
-        'frame-ancestors': ["'none'"],
-        'require-trusted-types-for': process.env.NODE_ENV === 'production' ? ["'script'"] : undefined,
-        'trusted-types': process.env.NODE_ENV === 'production' ? ['default'] : undefined
-      },
+      directives: finalConfig.cspDirectives,
       reportOnly: process.env.NODE_ENV === 'development'
     },
 
@@ -221,7 +211,13 @@ export const generalRateLimit = (config: Partial<SecurityConfig> = {}) => {
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => {
-      return req.ip || req.connection.remoteAddress || 'unknown';
+      // IPv6/IPv4アドレスの正規化
+      const ip = req.ip || req.connection.remoteAddress || 'unknown';
+      if (ip.includes('::ffff:')) {
+        // IPv4-mapped IPv6アドレスをIPv4に変換
+        return ip.replace('::ffff:', '');
+      }
+      return ip;
     },
     handler: (req, res, next) => {
       log.security('Rate limit exceeded', {
@@ -260,7 +256,12 @@ export const authRateLimit = (config: Partial<SecurityConfig> = {}) => {
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => {
-      const ip = req.ip || req.connection.remoteAddress || 'unknown';
+      // IPv6/IPv4アドレスの正規化
+      let ip = req.ip || req.connection.remoteAddress || 'unknown';
+      if (ip.includes('::ffff:')) {
+        // IPv4-mapped IPv6アドレスをIPv4に変換
+        ip = ip.replace('::ffff:', '');
+      }
       const username = req.body?.username || 'unknown';
       return `auth:${ip}:${username}`;
     },

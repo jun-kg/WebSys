@@ -12,6 +12,7 @@ import { body, param, query } from 'express-validator';
 import { prisma } from '../../lib/prisma';
 import { validateRequest } from '../../middleware/validation';
 import { performanceMonitor } from '../../middleware/performanceMonitor';
+import { cacheMiddleware, withCache } from '../../services/CacheService';
 
 const router = Router();
 
@@ -28,6 +29,7 @@ router.get('/',
     query('departmentIds').optional().isString()
   ],
   validateRequest,
+  cacheMiddleware(300000), // 5分キャッシュ
   async (req, res) => {
     try {
       const { companyId, departmentIds } = req.query;
@@ -44,55 +46,86 @@ router.get('/',
         deptWhere.id = { in: ids };
       }
 
-      // 部署と機能を取得
-      const [departments, features] = await Promise.all([
-        prisma.departments.findMany({
-          where: deptWhere,
-          orderBy: [{ level: 'asc' }, { displayOrder: 'asc' }]
-        }),
-        prisma.features.findMany({
-          where: { isActive: true },
-          orderBy: [{ category: 'asc' }, { displayOrder: 'asc' }]
-        })
-      ]);
+      // キャッシュ効率化された一括取得
+      const cacheKey = `permission-matrix:${companyId}:${departmentIds || 'all'}`
 
-      // 全部署の権限設定を取得
-      const allPermissions = await prisma.department_feature_permissions.findMany({
-        where: {
-          departmentId: { in: departments.map(d => d.id) }
-        }
-      });
-
-      // 部署×機能のマトリクス作成
-      const matrix = departments.map(dept => {
-        const deptPermissions = allPermissions.filter(p => p.departmentId === dept.id);
-        const permissionMap = new Map();
-        deptPermissions.forEach(p => {
-          permissionMap.set(p.featureId, p);
-        });
-
-        return {
-          departmentId: dept.id,
-          departmentName: dept.name,
-          features: features.map(feature => {
-            const perm = permissionMap.get(feature.id);
-            const permissions = [];
-
-            if (perm?.canView) permissions.push('V');
-            if (perm?.canCreate) permissions.push('C');
-            if (perm?.canEdit) permissions.push('E');
-            if (perm?.canDelete) permissions.push('D');
-            if (perm?.canApprove) permissions.push('A');
-            if (perm?.canExport) permissions.push('X');
-
-            return {
-              featureCode: feature.code,
-              featureName: feature.name,
-              permissions: permissions.join(',') || '-'
-            };
+      const [departments, features, allPermissions] = await withCache(
+        cacheKey,
+        () => Promise.all([
+          prisma.departments.findMany({
+            where: deptWhere,
+            orderBy: [{ level: 'asc' }, { displayOrder: 'asc' }],
+            select: {
+              id: true,
+              name: true,
+              level: true,
+              displayOrder: true
+            }
+          }),
+          prisma.features.findMany({
+            where: { isActive: true },
+            orderBy: [{ category: 'asc' }, { displayOrder: 'asc' }],
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              category: true,
+              displayOrder: true
+            }
+          }),
+          prisma.department_feature_permissions.findMany({
+            where: {
+              departments: {
+                companyId: parseInt(companyId as string),
+                isActive: true,
+                ...(departmentIds ? { id: { in: (departmentIds as string).split(',').map(id => parseInt(id)) } } : {})
+              }
+            },
+            select: {
+              departmentId: true,
+              featureId: true,
+              canView: true,
+              canCreate: true,
+              canEdit: true,
+              canDelete: true,
+              canApprove: true,
+              canExport: true
+            }
           })
-        };
+        ]),
+        300000 // 5分キャッシュ
+      );
+
+      // 権限データをハッシュマップで効率化（O(1)アクセス）
+      const permissionMap = new Map<string, any>();
+      allPermissions.forEach(p => {
+        permissionMap.set(`${p.departmentId}-${p.featureId}`, p);
       });
+
+      // 部署×機能のマトリクス作成（最適化版）
+      const matrix = departments.map(dept => ({
+        departmentId: dept.id,
+        departmentName: dept.name,
+        features: features.map(feature => {
+          const perm = permissionMap.get(`${dept.id}-${feature.id}`);
+
+          // 権限文字列を効率的に生成
+          const permissions = [
+            perm?.canView && 'V',
+            perm?.canCreate && 'C',
+            perm?.canEdit && 'E',
+            perm?.canDelete && 'D',
+            perm?.canApprove && 'A',
+            perm?.canExport && 'X'
+          ].filter(Boolean);
+
+          return {
+            featureCode: feature.code,
+            featureName: feature.name,
+            permissions: permissions.length > 0 ? permissions.join(',') : '-'
+          };
+        })
+      }));
 
       res.json({
         success: true,

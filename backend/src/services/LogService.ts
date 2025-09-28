@@ -16,102 +16,129 @@ export class LogService {
   }
 
   /**
-   * ログ保存
+   * ログ保存（バッチ最適化版）
    */
   async saveLogs(logs: LogEntry[]): Promise<{ saved: number; errors: string[] }> {
     const errors: string[] = []
     let saved = 0
 
-    for (const log of logs) {
-      try {
-        // データ検証
-        if (!this.validateLogEntry(log)) {
-          errors.push(`Invalid log entry: ${JSON.stringify(log)}`)
-          continue
-        }
+    // 有効なログをフィルタリング
+    const validLogs = logs.filter(log => {
+      if (!this.validateLogEntry(log)) {
+        errors.push(`Invalid log entry: ${JSON.stringify(log)}`)
+        return false
+      }
+      return true
+    })
 
-        // レベルを文字列に変換
-        const logLevel = this.convertLevelToEnum(log.level)
+    if (validLogs.length === 0) {
+      return { saved: 0, errors }
+    }
 
-        // カテゴリIDを取得または作成
-        let categoryId: number | undefined = undefined
-        if (log.category) {
-          const category = await prisma.log_categories.upsert({
-            where: { code: log.category },
-            create: {
-              code: log.category,
-              name: log.category,
-              description: `Auto-created category: ${log.category}`,
+    try {
+      // カテゴリを一括で取得・作成
+      const uniqueCategories = [...new Set(validLogs.map(log => log.category).filter(Boolean))]
+      const categoryMap = new Map<string, number>()
+
+      if (uniqueCategories.length > 0) {
+        // 既存カテゴリを取得
+        const existingCategories = await prisma.log_categories.findMany({
+          where: { code: { in: uniqueCategories } },
+          select: { id: true, code: true }
+        })
+
+        existingCategories.forEach(cat => {
+          categoryMap.set(cat.code, cat.id)
+        })
+
+        // 新規カテゴリを作成
+        const newCategories = uniqueCategories.filter(code => !categoryMap.has(code))
+        if (newCategories.length > 0) {
+          const createdCategories = await prisma.log_categories.createMany({
+            data: newCategories.map(code => ({
+              code,
+              name: code,
+              description: `Auto-created category: ${code}`,
               isActive: true,
               createdAt: new Date(),
               updatedAt: new Date()
-            },
-            update: {
-              updatedAt: new Date()
-            }
+            })),
+            skipDuplicates: true
           })
-          categoryId = category.id
+
+          // 作成されたカテゴリIDを取得
+          const newCats = await prisma.log_categories.findMany({
+            where: { code: { in: newCategories } },
+            select: { id: true, code: true }
+          })
+
+          newCats.forEach(cat => {
+            categoryMap.set(cat.code, cat.id)
+          })
         }
+      }
 
-        const savedLog = await prisma.logs.create({
-          data: {
-            timestamp: new Date(log.timestamp),
-            level: logLevel,
-            message: log.message,
-            userId: log.userId,
-            categoryId: categoryId,
-            source: log.source,
-            environment: log.environment || 'development',
-            context: log.details || log.error || log.performance || {}
-          },
-          include: {
-            users: true,
-            log_categories: true
-          }
-        })
-        saved++
+      // ログを一括作成
+      const logsToCreate = validLogs.map(log => ({
+        timestamp: new Date(log.timestamp),
+        level: this.convertLevelToEnum(log.level),
+        message: log.message,
+        userId: log.userId,
+        categoryId: log.category ? categoryMap.get(log.category) : undefined,
+        source: log.source,
+        environment: log.environment || 'development',
+        context: log.details || log.error || log.performance || {}
+      }))
 
-        // WebSocketでリアルタイム配信
+      await prisma.logs.createMany({
+        data: logsToCreate,
+        skipDuplicates: true
+      })
+
+      saved = validLogs.length
+
+      // WebSocketとアラート処理（非同期）
+      setImmediate(async () => {
         const webSocketService = getWebSocketService()
         if (webSocketService) {
-          const formattedLog = this.formatLogEntry(savedLog)
-          webSocketService.broadcastNewLog(formattedLog)
-
-          // 高レベルエラーの場合はアラートも送信
-          if (log.level >= 50) { // ERROR以上
-            webSocketService.broadcastAlert({
-              level: log.level >= 60 ? 'critical' : 'error',
-              message: `${log.level >= 60 ? '致命的エラー' : 'エラー'}が発生しました: ${log.message}`,
-              logEntry: formattedLog,
-              details: {
-                category: log.category,
-                source: log.source
-              }
-            })
+          for (const log of validLogs) {
+            // 高レベルエラーの場合はアラートも送信
+            if (log.level >= 50) { // ERROR以上
+              webSocketService.broadcastAlert({
+                level: log.level >= 60 ? 'critical' : 'error',
+                message: `${log.level >= 60 ? '致命的エラー' : 'エラー'}が発生しました: ${log.message}`,
+                logEntry: log,
+                details: {
+                  category: log.category,
+                  source: log.source
+                }
+              })
+            }
           }
         }
 
-        // アラートルールエンジンで評価
+        // アラートルールエンジンで評価（バッチ処理）
         try {
-          await this.alertRuleEngine.evaluateLog(log)
+          await Promise.allSettled(
+            validLogs.map(log => this.alertRuleEngine.evaluateLog(log))
+          )
         } catch (alertError) {
           console.error('アラートルール評価エラー:', alertError)
         }
-      } catch (error: any) {
-        errors.push(`Log save error: ${error.message}`)
-      }
-    }
+      })
 
-    // 統計情報更新（保存に成功したログのみ）
-    if (saved > 0) {
-      await this.updateStatistics(logs.slice(0, saved))
+      // 統計情報更新（非同期）
+      setImmediate(() => this.updateStatistics(validLogs))
+
+    } catch (error: any) {
+      errors.push(`Batch log save error: ${error.message}`)
     }
 
     return { saved, errors }
   }
 
   /**
-   * ログ検索
+   * ログ検索（最適化版）
    */
   async searchLogs(params: LogSearchParams): Promise<LogSearchResult> {
     const where: any = {}
@@ -128,9 +155,9 @@ export class LogService {
       where.level = { in: params.levels }
     }
 
-    // カテゴリフィルタ
+    // カテゴリフィルタ（カテゴリテーブルを使用）
     if (params.categories && params.categories.length > 0) {
-      where.category = { in: params.categories }
+      where.log_categories = { code: { in: params.categories } }
     }
 
     // ソースフィルタ
@@ -138,23 +165,18 @@ export class LogService {
       where.source = { in: params.sources }
     }
 
-    // トレースIDフィルタ
-    if (params.traceId) {
-      where.traceId = params.traceId
-    }
-
     // ユーザーIDフィルタ
     if (params.userId) {
       where.userId = params.userId
     }
 
-    // フリーテキスト検索
+    // フリーテキスト検索（インデックス利用）
     if (params.query) {
-      where.message = { contains: params.query, mode: 'insensitive' }
+      where.OR = [
+        { message: { contains: params.query, mode: 'insensitive' } },
+        { context: { path: ['error', 'message'], string_contains: params.query } }
+      ]
     }
-
-    // 総件数取得
-    const total = await prisma.logs.count({ where })
 
     // ページング計算
     const skip = (params.page - 1) * params.pageSize
@@ -164,22 +186,39 @@ export class LogService {
     const orderBy: any = {}
     orderBy[params.sortBy] = params.sortOrder
 
-    // ログ取得
-    const logs = await prisma.logs.findMany({
-      where,
-      orderBy,
-      skip,
-      take,
-      include: {
-        users: {
-          select: {
-            id: true,
-            username: true,
-            name: true
+    // 総件数とログを並列取得
+    const [total, logs] = await Promise.all([
+      prisma.logs.count({ where }),
+      prisma.logs.findMany({
+        where,
+        orderBy,
+        skip,
+        take,
+        select: {
+          id: true,
+          timestamp: true,
+          level: true,
+          message: true,
+          userId: true,
+          source: true,
+          environment: true,
+          context: true,
+          users: {
+            select: {
+              id: true,
+              username: true,
+              name: true
+            }
+          },
+          log_categories: {
+            select: {
+              code: true,
+              name: true
+            }
           }
         }
-      }
-    })
+      })
+    ])
 
     return {
       logs: logs.map(this.formatLogEntry),
