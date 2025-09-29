@@ -27,6 +27,10 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
+          // モバイル専用軽量バンドル
+          if (id.includes('mobileOptimizer')) {
+            return 'mobile-core'
+          }
           // Element Plus を機能別に細分化
           if (id.includes('element-plus')) {
             // 基本コンポーネント（常に必要）
@@ -134,7 +138,7 @@ export default defineConfig({
         }
       }
     },
-    chunkSizeWarningLimit: 300, // 300KB に引き下げて更なる分割を促進
+    chunkSizeWarningLimit: 200, // 200KB に引き下げ、モバイル向け軽量化
     target: 'es2020', // モダンブラウザ最適化
     minify: 'terser',
     terserOptions: {

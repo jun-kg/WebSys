@@ -279,6 +279,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { DataAnalysis, User, Document, ArrowDown, Monitor, Warning, Message, Lock, CircleCheck, Operation, Expand, Fold, UserFilled } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+import { useMobileOptimizer } from '@/utils/mobileOptimizer'
 
 const route = useRoute()
 const router = useRouter()
@@ -288,20 +289,42 @@ const activeMenu = computed(() => route.path)
 const currentPageTitle = computed(() => route.meta.title || '')
 const username = computed(() => authStore.getDisplayName())
 
-// モバイル対応
+// モバイル最適化対応
+const { batchDOMUpdates, deferTask } = useMobileOptimizer()
 const isMobile = ref(false)
 const sidebarVisible = ref(false)
+let resizeTimeout: number
 
-// ウィンドウサイズの監視
+// ウィンドウサイズの監視（パフォーマンス最適化版）
 const checkMobile = () => {
-  isMobile.value = window.innerWidth < 768
-  if (!isMobile.value) {
-    sidebarVisible.value = false
+  if (resizeTimeout) {
+    clearTimeout(resizeTimeout)
   }
+
+  resizeTimeout = window.setTimeout(() => {
+    const wasMobile = isMobile.value
+    isMobile.value = window.innerWidth < 768
+
+    // モバイル←→PC切り替え時のみ処理
+    if (wasMobile !== isMobile.value) {
+      batchDOMUpdates([
+        () => {
+          if (!isMobile.value) {
+            sidebarVisible.value = false
+          }
+        }
+      ])
+    }
+  }, 100) // デバウンス100ms
 }
 
 const toggleSidebar = () => {
-  sidebarVisible.value = !sidebarVisible.value
+  // アニメーション処理を最適化
+  batchDOMUpdates([
+    () => {
+      sidebarVisible.value = !sidebarVisible.value
+    }
+  ])
 }
 
 // ナビゲーションと閉じる
@@ -331,11 +354,23 @@ const navigateAndClose = async (path: string) => {
 
 onMounted(() => {
   checkMobile()
-  window.addEventListener('resize', checkMobile)
+
+  // パフォーマンス最適化：パッシブリスナー使用
+  window.addEventListener('resize', checkMobile, { passive: true })
+
+  // 初期化を遅延実行でパフォーマンス向上
+  deferTask(() => {
+    // 低優先度の初期化処理をここに
+    console.log('Layout initialized with mobile optimization')
+  })
 })
 
 onUnmounted(() => {
+  // クリーンアップ
   window.removeEventListener('resize', checkMobile)
+  if (resizeTimeout) {
+    clearTimeout(resizeTimeout)
+  }
 })
 
 // メニューアクセス権限チェック
