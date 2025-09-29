@@ -8,25 +8,8 @@
  * - font-display: swap でフォント読み込み中も文字表示を保証
  */
 
-/* BIZ UDゴシック - 400 weight のみ使用 */
-@font-face {
-  font-family: 'BIZ UDGothic';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('https://fonts.gstatic.com/s/bizudgothic/v3/g42JGwP2CtOYDL7r4oLwJF4YKH0yWFRB.woff2') format('woff2');
-  unicode-range: U+0020-007F, U+3040-309F, U+30A0-30FF, U+4E00-9FAF, U+FF00-FFEF;
-}
-
-/* BIZ UDゴシック - 700 weight のみ使用 */
-@font-face {
-  font-family: 'BIZ UDGothic';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('https://fonts.gstatic.com/s/bizudgothic/v3/g42AGwP2CtOYDL7r4oLwJF4YKLg_bmJP.woff2') format('woff2');
-  unicode-range: U+0020-007F, U+3040-309F, U+30A0-30FF, U+4E00-9FAF, U+FF00-FFEF;
-}
+/* BIZ UDゴシック - 正しいGoogle FontsのCDNから読み込み */
+@import url('https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&display=swap');
 
 /* フォールバックフォント定義 - BIZ UDゴシックのみ使用 */
 .font-biz-gothic {

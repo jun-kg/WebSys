@@ -188,8 +188,7 @@ describe('Permission Template API', () => {
     });
 
     it('PT-API-008: 異常系：必須フィールド不足（name）', async () => {
-      const invalidData = { ...validTemplateData };
-      delete invalidData.name;
+      const { name, ...invalidData } = validTemplateData;
 
       const response = await request(app)
         .post('/api/permissions/templates')
@@ -202,8 +201,7 @@ describe('Permission Template API', () => {
     });
 
     it('PT-API-009: 異常系：companyId不足', async () => {
-      const invalidData = { ...validTemplateData };
-      delete invalidData.companyId;
+      const { companyId, ...invalidData } = validTemplateData;
 
       const response = await request(app)
         .post('/api/permissions/templates')
@@ -216,8 +214,7 @@ describe('Permission Template API', () => {
     });
 
     it('PT-API-010: 異常系：features不足', async () => {
-      const invalidData = { ...validTemplateData };
-      delete invalidData.features;
+      const { features, ...invalidData } = validTemplateData;
 
       const response = await request(app)
         .post('/api/permissions/templates')

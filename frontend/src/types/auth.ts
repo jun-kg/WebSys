@@ -64,9 +64,13 @@ export interface LoginRequest {
 export interface LoginResponse {
   success: boolean
   data?: {
-    token: string
+    accessToken: string
+    refreshToken: string
     user: User
-    expiresIn: number
+    accessExpiresIn: number
+    refreshExpiresIn: number
+    isFirstLogin: boolean
+    requirePasswordChange: boolean
   }
   error?: {
     code: string

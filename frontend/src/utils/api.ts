@@ -20,7 +20,13 @@ class ApiClient {
 
   private getAuthHeaders(): Record<string, string> {
     const token = localStorage.getItem('token')
-    return token ? { Authorization: `Bearer ${token}` } : {}
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    if (token) {
+      console.log('Sending Authorization header:', headers.Authorization)
+    } else {
+      console.log('No token found in localStorage')
+    }
+    return headers
   }
 
   private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {

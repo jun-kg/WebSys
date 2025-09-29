@@ -47,15 +47,25 @@ export const useAuthStore = defineStore('auth', () => {
   const login = async (credentials: LoginRequest): Promise<boolean> => {
     try {
       isLoading.value = true
+      console.log('Logging in with credentials:', credentials.username)
       const response = await authApi.login(credentials)
+      console.log('Login response:', response)
 
       if (response.success && response.data) {
-        setToken(response.data.token)
+        console.log('Setting token and user...')
+        console.log('Token received:', response.data.accessToken)
+        setToken(response.data.accessToken)
         setUser(response.data.user)
+        console.log('Token stored in localStorage:', localStorage.getItem('token'))
         loginFailureCount.value = 0
 
         // メニュー権限を取得
-        await loadMenuPermissions()
+        try {
+          await loadMenuPermissions()
+        } catch (error) {
+          console.error('Failed to load menu permissions:', error)
+          // 権限取得に失敗してもログインは続行
+        }
 
         ElMessage.success('ログインしました')
         return true

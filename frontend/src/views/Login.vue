@@ -87,8 +87,11 @@ const handleLogin = async () => {
         password: loginForm.password
       })
 
+      console.log('Login success:', success)
       if (success) {
-        router.push('/dashboard')
+        console.log('Redirecting to /dashboard')
+        // 強制的にダッシュボードへリダイレクト
+        window.location.href = '/dashboard'
       }
     } catch (error: any) {
       console.error('ログインエラー:', error)
