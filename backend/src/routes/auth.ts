@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import bcrypt from 'bcryptjs';
@@ -47,7 +47,7 @@ router.post(
       .isLength({ min: 1, max: 128 })
       .withMessage('パスワードは1-128文字で入力してください')
   ],
-  async (req, res) => {
+  async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -259,7 +259,7 @@ router.post(
       .custom((value, { req }) => value !== req.body.currentPassword)
       .withMessage('新しいパスワードは現在のパスワードと異なる必要があります')
   ],
-  async (req, res) => {
+  async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -273,7 +273,17 @@ router.post(
     }
 
     const { currentPassword, newPassword } = req.body;
-    const userId = req.user.id;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'AUTH_002',
+          message: '認証が必要です'
+        }
+      });
+    }
 
     try {
       // ユーザー情報取得
@@ -342,7 +352,7 @@ router.post(
       .withMessage('有効なメールアドレスを入力してください')
       .normalizeEmail()
   ],
-  async (req, res) => {
+  async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -424,7 +434,7 @@ router.post(
       .isLength({ min: 6, max: 128 })
       .withMessage('新しいパスワードは6-128文字で入力してください')
   ],
-  async (req, res) => {
+  async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -516,7 +526,7 @@ router.post(
       .isLength({ min: 1, max: 100 })
       .withMessage('氏名は1-100文字で入力してください')
   ],
-  async (req, res) => {
+  async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -559,7 +569,9 @@ router.post(
           email,
           password: hashedPassword,
           name,
-          role: 'USER'
+          role: 'USER',
+          createdAt: new Date(),
+          updatedAt: new Date()
         }
       });
 
@@ -574,9 +586,11 @@ router.post(
         res.status(201).json({
           success: true,
           data: {
-            token: loginResult.token,
+            accessToken: loginResult.accessToken,
+            refreshToken: loginResult.refreshToken,
             user: loginResult.user,
-            expiresIn: loginResult.expiresIn,
+            accessExpiresIn: loginResult.accessExpiresIn,
+            refreshExpiresIn: loginResult.refreshExpiresIn,
             message: 'ユーザー登録が完了しました'
           }
         });
@@ -612,7 +626,7 @@ router.post(
 router.get('/security/health', authMiddleware, async (req, res) => {
   try {
     // 管理者権限チェック
-    if (req.user.role !== 'ADMIN') {
+    if (req.user?.role !== 'ADMIN') {
       return res.status(403).json({
         success: false,
         error: {

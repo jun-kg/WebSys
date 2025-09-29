@@ -9,10 +9,10 @@
  * - 暗号化・ハッシュ機能
  */
 
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { User } from '@prisma/client';
+import { users as User } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { log, LogCategory } from '../utils/logger';
 
@@ -88,21 +88,21 @@ export class SecurityService {
       username: user.username,
       role: user.role,
       companyId: user.companyId,
-      departmentId: user.departmentId
+      departmentId: user.primaryDepartmentId
     };
 
     // アクセストークン（短期）
     const accessToken = jwt.sign(
       { ...basePayload, type: 'access', jti },
       this.accessTokenSecret,
-      { expiresIn: this.accessTokenExpiry }
+      { expiresIn: this.accessTokenExpiry } as SignOptions
     );
 
     // リフレッシュトークン（長期）
     const refreshToken = jwt.sign(
       { ...basePayload, type: 'refresh', jti },
       this.refreshTokenSecret,
-      { expiresIn: this.refreshTokenExpiry }
+      { expiresIn: this.refreshTokenExpiry } as SignOptions
     );
 
     // データベースにリフレッシュトークンを保存
@@ -227,12 +227,12 @@ export class SecurityService {
           username: user.username,
           role: user.role,
           companyId: user.companyId,
-          departmentId: user.departmentId,
+          departmentId: user.primaryDepartmentId,
           type: 'access',
           jti: newJti
         },
         this.accessTokenSecret,
-        { expiresIn: this.accessTokenExpiry }
+        { expiresIn: this.accessTokenExpiry } as SignOptions
       );
 
       // セキュリティイベントをログ

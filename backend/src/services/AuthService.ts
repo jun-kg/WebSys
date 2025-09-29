@@ -1,4 +1,4 @@
-import { User, UserRole } from '@prisma/client';
+import { users as User, UserRole } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { AuditService } from './AuditService';
 import { securityService } from './SecurityService';
@@ -234,19 +234,19 @@ export class AuthService {
         expiresIn: Math.max(0, expiresInSeconds)
       };
 
-    } catch (error) {
+    } catch (error: any) {
       // 予期しないシステムエラー
       console.error('Token verification system error:', {
-        error: error.message,
-        stack: error.stack,
+        error: error?.message || 'Unknown error',
+        stack: error?.stack,
         tokenLength: token?.length,
         timestamp: new Date().toISOString()
       });
 
       return {
         isValid: false,
-        error: `システムエラーが発生しました: ${error.message}`,
-        errorCode: 'SYSTEM_ERROR'
+        error: `システムエラーが発生しました: ${error?.message || 'Unknown error'}`,
+        errorCode: 'INVALID'
       };
     }
   }

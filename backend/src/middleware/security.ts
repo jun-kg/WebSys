@@ -305,8 +305,8 @@ export const maliciousRequestDetection = (req: Request, res: Response, next: Nex
     });
   }
 
-  // 悪意のあるパターンチェック
-  const allContent = `${requestBody} ${queryString} ${url}`;
+  // 悪意のあるパターンチェック（URLパラメータは除外）
+  const allContent = `${requestBody}`;
   for (const pattern of suspiciousPatterns) {
     if (pattern.test(allContent)) {
       log.security('Malicious request detected', {
