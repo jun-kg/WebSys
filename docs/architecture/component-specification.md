@@ -1100,11 +1100,11 @@ app.config.errorHandler = (error, instance, info) => {
 
 ### 実装ガイド
 - [開発ガイドライン](./09-開発ガイドライン.md) - コーディング規約
-- [共通コンポーネント仕様](./10-共通コンポーネント仕様.md) - 使用方法
+- [共通コンポーネント仕様](architecture/common-components.md) - 使用方法
 - [ユニバーサルデザインガイドライン](./12-ユニバーサルデザインガイドライン.md) - UI/UX指針
 
 ### API・バックエンド
-- [API仕様書](./07-API仕様書.md) - バックエンドAPI
+- [API仕様書](architecture/api-specification.md) - バックエンドAPI
 - [システム基盤設計書](./01_機能設計書/99_システム基盤/システム基盤設計書.md) - インフラ構成
 
 ---

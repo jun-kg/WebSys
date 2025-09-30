@@ -194,7 +194,7 @@ interface CommonComponentEvents {
 
 開発前に以下のドキュメントを必ず確認：
 - [レスポンシブデザインガイドライン](./11-レスポンシブデザインガイドライン.md)
-- [共通コンポーネント仕様](./10-共通コンポーネント仕様.md)
+- [共通コンポーネント仕様](architecture/common-components.md)
 
 ## チェック機能の実装
 

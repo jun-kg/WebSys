@@ -43,7 +43,7 @@ WebSysプロジェクトのドキュメント改善計画**Phase1-3がすべて�
   影響: 開発効率低下・学習コスト増大
 
 Phase1改善:
-  施策: MASTER_REFERENCE.md作成・README.md改訂
+  施策: core/MASTER_REFERENCE.md作成・README.md改訂
   成果: 30秒以内アクセス達成（90%時間短縮）
 
 Phase2改善:
@@ -81,7 +81,7 @@ Phase3改善:
   影響: 情報不整合・保守困難
 
 Phase1改善:
-  施策: MASTER_REFERENCE.md統一・重複排除
+  施策: core/MASTER_REFERENCE.md統一・重複排除
   成果: Single Source of Truth確立
 
 Phase2改善:

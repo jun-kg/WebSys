@@ -5,7 +5,7 @@
 WebSysは、モダンな3層アーキテクチャを採用した企業向け社内システム開発プラットフォームです。
 Docker化により一貫した開発・デプロイ体験を提供し、マイクロサービス化による高性能・高可用性を実現しています。
 
-> 📊 **詳細技術仕様**: [MASTER_REFERENCE.md](./MASTER_REFERENCE.md) で一元管理されています
+> 📊 **詳細技術仕様**: [MASTER_REFERENCE.md](core/MASTER_REFERENCE.md) で一元管理されています
 
 ## 全体アーキテクチャ
 
