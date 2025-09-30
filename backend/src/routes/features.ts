@@ -68,6 +68,21 @@ router.get('/', async (req: Request, res: Response) => {
  */
 router.get('/categories', async (req: Request, res: Response) => {
   try {
+    // カテゴリマスタ定義
+    const categoryMaster: Record<string, string> = {
+      'SYSTEM': 'システム管理',
+      'USER_MGMT': 'ユーザー管理',
+      'LOG_MGMT': 'ログ管理',
+      'FEATURE_MGMT': '機能管理',
+      'REPORT': 'レポート',
+      'DASHBOARD': 'ダッシュボード',
+      'ADMIN': '管理',
+      'GENERAL': '一般',
+      'MANAGEMENT': '管理',
+      'MONITORING': '監視',
+      'CUSTOM': 'カスタム'
+    };
+
     const categoriesRaw = await prisma.features.groupBy({
       by: ['category'],
       _count: true,
@@ -76,10 +91,32 @@ router.get('/categories', async (req: Request, res: Response) => {
       }
     });
 
+    // フロントエンドが期待する形式に変換
     const categories = categoriesRaw.map(cat => ({
-      category: cat.category,
-      count: cat._count
+      code: cat.category,
+      name: categoryMaster[cat.category] || cat.category,
+      description: `${categoryMaster[cat.category] || cat.category}カテゴリ`,
+      featureCount: cat._count
     }));
+
+    // 定義済みカテゴリのうち、まだ使用されていないものも追加
+    const usedCategories = new Set(categoriesRaw.map(cat => cat.category));
+    for (const [code, name] of Object.entries(categoryMaster)) {
+      if (!usedCategories.has(code)) {
+        categories.push({
+          code,
+          name,
+          description: `${name}カテゴリ`,
+          featureCount: 0
+        });
+      }
+    }
+
+    // 表示順でソート
+    categories.sort((a, b) => {
+      const order = ['SYSTEM', 'USER_MGMT', 'LOG_MGMT', 'FEATURE_MGMT', 'ADMIN', 'GENERAL', 'MANAGEMENT', 'MONITORING', 'REPORT', 'DASHBOARD', 'CUSTOM'];
+      return order.indexOf(a.code) - order.indexOf(b.code);
+    });
 
     res.json({
       success: true,
