@@ -1,0 +1,301 @@
+# WebSys ドキュメント品質保証ワークフロー
+# 作成日: 2025-09-30
+# 目的: ドキュメントの継続的品質管理とCI/CD統合
+
+name: 📚 Documentation Quality Assurance
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    paths: [ 'docs/**/*.md', 'scripts/**' ]
+  pull_request:
+    branches: [ main, master ]
+    paths: [ 'docs/**/*.md', 'scripts/**' ]
+  schedule:
+    # 毎日午前9時に実行（JST）
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      check_external_links:
+        description: '外部リンクもチェックする'
+        required: false
+        default: 'false'
+        type: boolean
+      output_format:
+        description: '出力形式'
+        required: false
+        default: 'console'
+        type: choice
+        options:
+        - console
+        - json
+        - html
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  document-quality-check:
+    name: 📋 ドキュメント品質チェック
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 リポジトリチェックアウト
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 📂 ディレクトリ作成
+      run: |
+        mkdir -p docs/quality-reports
+        mkdir -p docs/artifacts
+
+    - name: 🔍 Phase1 基本品質チェック
+      run: |
+        echo "🔍 Phase1 基本品質チェック実行"
+        ./scripts/quality-check.sh
+      id: basic_quality_check
+      continue-on-error: true
+
+    - name: 🔮 Phase2 高度品質チェック
+      run: |
+        echo "🔮 Phase2 高度品質チェック実行"
+        ./scripts/advanced-quality-check.sh false comprehensive
+      id: advanced_quality_check
+      continue-on-error: true
+
+    - name: 📊 Phase2 動的レポート生成
+      run: |
+        echo "📊 Phase2 動的レポート生成"
+        python3 scripts/dynamic-report-generator.py --format both
+      id: dynamic_report
+      continue-on-error: true
+
+    - name: 🔗 リンクチェック実行
+      run: |
+        echo "🔗 リンクチェック実行"
+        CHECK_EXTERNAL="${{ inputs.check_external_links || 'false' }}"
+        OUTPUT_FORMAT="${{ inputs.output_format || 'console' }}"
+        ./scripts/link-check.sh $CHECK_EXTERNAL $OUTPUT_FORMAT
+      id: link_check
+      continue-on-error: true
+
+    - name: 📊 レポート統合
+      run: |
+        cat > docs/quality-reports/summary-$(date +%Y%m%d-%H%M%S).md << 'EOF'
+        # WebSys ドキュメント品質レポート
+
+        ## 実行情報
+        - **実行日時**: $(date)
+        - **ブランチ**: ${{ github.ref_name }}
+        - **コミット**: ${{ github.sha }}
+        - **トリガー**: ${{ github.event_name }}
+
+        ## チェック結果サマリー
+        - **品質チェック**: ${{ steps.quality_check.outcome }}
+        - **リンクチェック**: ${{ steps.link_check.outcome }}
+
+        ## 詳細
+        品質チェックとリンクチェックの詳細ログは以下のファイルを参照:
+        - `docs/quality-check-*.log`
+        - `docs/link-check-*.*`
+
+        ## 改善提案
+        エラーや警告が検出された場合:
+        1. 該当ファイルの修正
+        2. MASTER_REFERENCE.md との整合性確認
+        3. リンク切れの修正
+        4. 日付形式の統一（YYYY-MM-DD）
+
+        ## CI/CD統合状況
+        このチェックは以下のタイミングで自動実行されます:
+        - Pull Request作成時
+        - メインブランチへのpush時
+        - 毎日午前9時（定期実行）
+        - 手動実行（workflow_dispatch）
+
+        EOF
+
+    - name: 📤 アーティファクト保存
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: documentation-quality-reports-${{ github.run_number }}
+        path: |
+          docs/quality-check-*.log
+          docs/link-check-*.*
+          docs/quality-reports/
+          docs/artifacts/
+        retention-days: 30
+
+    - name: 💬 PR コメント作成
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+
+          // 品質チェック結果の取得
+          const basicQualityResult = '${{ steps.basic_quality_check.outcome }}';
+          const advancedQualityResult = '${{ steps.advanced_quality_check.outcome }}';
+          const dynamicReportResult = '${{ steps.dynamic_report.outcome }}';
+          const linkResult = '${{ steps.link_check.outcome }}';
+
+          // ログファイルの確認
+          const logFiles = fs.readdirSync('docs').filter(f => f.includes('quality-check-') && f.endsWith('.log'));
+          let logContent = '';
+
+          if (logFiles.length > 0) {
+            const latestLog = logFiles.sort().pop();
+            logContent = fs.readFileSync(`docs/${latestLog}`, 'utf8').slice(0, 1000);
+          }
+
+          const comment = `## 📚 ドキュメント品質チェック結果
+
+          | チェック項目 | 結果 |
+          |------------|------|
+          | Phase1 基本品質 | ${basicQualityResult === 'success' ? '✅ 成功' : '❌ 失敗'} |
+          | Phase2 高度品質 | ${advancedQualityResult === 'success' ? '✅ 成功' : '❌ 失敗'} |
+          | Phase2 動的レポート | ${dynamicReportResult === 'success' ? '✅ 成功' : '❌ 失敗'} |
+          | リンクチェック | ${linkResult === 'success' ? '✅ 成功' : '❌ 失敗'} |
+
+          ${basicQualityResult !== 'success' || advancedQualityResult !== 'success' || dynamicReportResult !== 'success' || linkResult !== 'success' ?
+            '### ⚠️ 改善が必要な項目があります\n\n詳細な分析レポートは Actions のアーティファクトを確認してください。\n\n**Phase2機能**: 高度品質チェック・動的レポート生成・AI分析が利用可能です。' :
+            '### 🎉 Phase2 すべてのチェックが成功しました！\n\n**新機能**: 高度品質分析・動的レポート・トレンド分析が完全稼働中です。'}
+
+          <details>
+          <summary>品質チェックログ（抜粋）</summary>
+
+          \`\`\`
+          ${logContent}
+          ${logContent.length >= 1000 ? '\n... (詳細はアーティファクトを参照)' : ''}
+          \`\`\`
+          </details>
+
+          ### 🔗 関連リンク
+          - [品質改善ガイド](docs/72-ドキュメント総合レビュー結果・改善計画書.md)
+          - [技術仕様統一](docs/MASTER_REFERENCE.md)
+          - [ドキュメントハブ](docs/README.md)
+          `;
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+    - name: ❌ 品質チェック失敗時
+      if: steps.quality_check.outcome == 'failure' || steps.link_check.outcome == 'failure'
+      run: |
+        echo "::error title=ドキュメント品質チェック失敗::品質チェックまたはリンクチェックで問題が検出されました"
+        echo "品質チェック結果: ${{ steps.quality_check.outcome }}"
+        echo "リンクチェック結果: ${{ steps.link_check.outcome }}"
+        echo ""
+        echo "改善方法:"
+        echo "1. ログファイルで詳細エラーを確認"
+        echo "2. 壊れたリンクの修正"
+        echo "3. MASTER_REFERENCE.md参照の追加"
+        echo "4. 日付形式の統一（YYYY-MM-DD）"
+        echo "5. 文字コードをUTF-8に統一"
+        exit 1
+
+  markdown-lint:
+    name: 📝 Markdown 構文チェック
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 チェックアウト
+      uses: actions/checkout@v4
+
+    - name: 🔧 Node.js セットアップ
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: 📦 markdownlint-cli インストール
+      run: npm install -g markdownlint-cli
+
+    - name: 📝 Markdown 構文チェック
+      run: |
+        markdownlint docs/**/*.md --config .markdownlint.json || true
+      continue-on-error: true
+
+    - name: 📋 構文チェック結果
+      run: |
+        echo "Markdown構文チェックが完了しました"
+        echo "詳細な構文規則については .markdownlint.json を参照してください"
+
+  spell-check:
+    name: ✏️ スペルチェック
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 チェックアウト
+      uses: actions/checkout@v4
+
+    - name: 🔧 Node.js セットアップ
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: 📦 cspell インストール
+      run: npm install -g cspell
+
+    - name: ✏️ スペルチェック実行
+      run: |
+        # 技術用語辞書を作成
+        cat > .cspell-tech-words.txt << 'EOF'
+        WebSys
+        Vue.js
+        Element Plus
+        TypeScript
+        Prisma
+        PostgreSQL
+        Docker
+        GitHub
+        API
+        REST
+        JSON
+        JWT
+        RBAC
+        CI/CD
+        OAuth
+        CORS
+        Nginx
+        Redis
+        Grafana
+        Prometheus
+        Elasticsearch
+        Kibana
+        Fluentd
+        Jaeger
+        EOF
+
+        # 基本的な英単語スペルチェック（日本語除外）
+        cspell "docs/**/*.md" --config .cspell.json --words-only --unique || true
+      continue-on-error: true
+
+  summary:
+    name: 📊 品質チェック総合結果
+    runs-on: ubuntu-latest
+    needs: [document-quality-check, markdown-lint, spell-check]
+    if: always()
+
+    steps:
+    - name: 📊 総合結果判定
+      run: |
+        echo "## 📚 ドキュメント品質チェック総合結果"
+        echo "| チェック項目 | 結果 |"
+        echo "|------------|------|"
+        echo "| ドキュメント品質 | ${{ needs.document-quality-check.result == 'success' && '✅ 成功' || '❌ 失敗' }} |"
+        echo "| Markdown構文 | ${{ needs.markdown-lint.result == 'success' && '✅ 成功' || '❌ 失敗' }} |"
+        echo "| スペルチェック | ${{ needs.spell-check.result == 'success' && '✅ 成功' || '⚠️ 警告' }} |"
+        echo ""
+
+        if [ "${{ needs.document-quality-check.result }}" = "success" ]; then
+          echo "🎉 ドキュメント品質は良好です！"
+        else
+          echo "⚠️ ドキュメント品質の改善が推奨されます"
+          echo "詳細は各ジョブのログとアーティファクトを確認してください"
+        fi
