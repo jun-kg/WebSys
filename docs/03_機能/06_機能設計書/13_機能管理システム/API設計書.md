@@ -1201,3 +1201,643 @@ export const checkBulkPermissions = async (
   });
 };
 ```
+
+---
+
+## 13. 権限テンプレート管理API
+
+### 13.1 権限テンプレート一覧取得
+**GET** `/api/permissions/templates`
+
+#### 概要
+会社の権限テンプレート一覧を取得します。管理者および部門マネージャーがアクセス可能です。
+
+#### リクエストパラメータ
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| companyId | integer | ○ | 会社ID |
+| category | string | - | カテゴリフィルタ（CUSTOM/ADMIN/GENERAL/READONLY） |
+| isActive | boolean | - | 有効フラグフィルタ |
+
+#### レスポンス
+```json
+{
+  "success": true,
+  "data": {
+    "templates": [
+      {
+        "id": 1,
+        "companyId": 1,
+        "name": "管理者権限",
+        "description": "全機能へのフルアクセス権限",
+        "category": "ADMIN",
+        "isPreset": true,
+        "isActive": true,
+        "displayOrder": 1,
+        "featureCount": 15,
+        "createdAt": "2024-01-01T00:00:00Z",
+        "updatedAt": "2024-01-01T00:00:00Z",
+        "createdBy": {
+          "id": 1,
+          "name": "システム管理者"
+        }
+      }
+    ]
+  }
+}
+```
+
+#### HTTPステータスコード
+- `200`: 成功
+- `401`: 認証エラー
+- `403`: 権限不足
+- `500`: サーバーエラー
+
+#### 権限要件
+- ロール: ADMIN または MANAGER
+
+---
+
+### 13.2 権限テンプレート詳細取得
+**GET** `/api/permissions/templates/{templateId}`
+
+#### 概要
+指定された権限テンプレートの詳細情報と機能権限設定を取得します。
+
+#### パスパラメータ
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| templateId | integer | ○ | テンプレートID |
+
+#### レスポンス
+```json
+{
+  "success": true,
+  "data": {
+    "template": {
+      "id": 1,
+      "companyId": 1,
+      "name": "管理者権限",
+      "description": "全機能へのフルアクセス権限",
+      "category": "ADMIN",
+      "isPreset": true,
+      "isActive": true,
+      "displayOrder": 1,
+      "features": [
+        {
+          "id": 101,
+          "featureId": 1,
+          "feature": {
+            "id": 1,
+            "code": "USER_MGMT",
+            "name": "ユーザー管理"
+          },
+          "canView": true,
+          "canCreate": true,
+          "canEdit": true,
+          "canDelete": true,
+          "canApprove": false,
+          "canExport": true
+        }
+      ],
+      "createdAt": "2024-01-01T00:00:00Z",
+      "updatedAt": "2024-01-01T00:00:00Z"
+    }
+  }
+}
+```
+
+#### HTTPステータスコード
+- `200`: 成功
+- `401`: 認証エラー
+- `403`: 権限不足
+- `404`: テンプレートが見つからない
+- `500`: サーバーエラー
+
+#### 権限要件
+- ロール: ADMIN または MANAGER
+
+---
+
+### 13.3 権限テンプレート作成
+**POST** `/api/permissions/templates`
+
+#### 概要
+新規の権限テンプレートを作成します。管理者のみが実行可能です。
+
+#### リクエストボディ
+```json
+{
+  "companyId": 1,
+  "name": "営業部権限",
+  "description": "営業部向けの標準権限設定",
+  "category": "CUSTOM",
+  "features": [
+    {
+      "featureId": 1,
+      "canView": true,
+      "canCreate": true,
+      "canEdit": false,
+      "canDelete": false,
+      "canApprove": false,
+      "canExport": true
+    }
+  ]
+}
+```
+
+#### バリデーション
+| フィールド | ルール | エラーメッセージ |
+|-----------|--------|-----------------|
+| companyId | 必須、整数 | 会社IDは必須です |
+| name | 必須、2〜100文字 | テンプレート名は2〜100文字で入力してください |
+| name | 同一会社内で重複不可 | 同名のテンプレートが既に存在します |
+| category | 必須、列挙型 | カテゴリはCUSTOM/ADMIN/GENERAL/READONLYから選択してください |
+| features | 必須、配列最小1件 | 少なくとも1つの機能設定が必要です |
+
+#### レスポンス
+```json
+{
+  "success": true,
+  "data": {
+    "template": {
+      "id": 5,
+      "companyId": 1,
+      "name": "営業部権限",
+      "description": "営業部向けの標準権限設定",
+      "category": "CUSTOM",
+      "isPreset": false,
+      "isActive": true,
+      "displayOrder": 10,
+      "createdAt": "2024-01-20T10:00:00Z",
+      "updatedAt": "2024-01-20T10:00:00Z"
+    }
+  },
+  "meta": {
+    "timestamp": "2024-01-20T10:00:00Z"
+  }
+}
+```
+
+#### HTTPステータスコード
+- `201`: 作成成功
+- `400`: バリデーションエラー
+- `401`: 認証エラー
+- `403`: 権限不足
+- `409`: 重複エラー（同名テンプレート存在）
+- `500`: サーバーエラー
+
+#### 権限要件
+- ロール: ADMIN のみ
+
+---
+
+### 13.4 権限テンプレート更新
+**PUT** `/api/permissions/templates/{templateId}`
+
+#### 概要
+既存の権限テンプレートを更新します。プリセットテンプレートは編集不可です。
+
+#### パスパラメータ
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| templateId | integer | ○ | テンプレートID |
+
+#### リクエストボディ
+```json
+{
+  "name": "営業部権限（更新版）",
+  "description": "営業部向けの標準権限設定（2024年版）",
+  "features": [
+    {
+      "featureId": 1,
+      "canView": true,
+      "canCreate": true,
+      "canEdit": true,
+      "canDelete": false,
+      "canApprove": false,
+      "canExport": true
+    }
+  ]
+}
+```
+
+#### ビジネスルール
+1. **プリセットテンプレート保護**
+   - `isPreset = true` のテンプレートは編集不可
+   - 編集試行時はHTTP 403エラーを返却
+
+2. **監査ログ記録**
+   - 変更前の権限設定を記録
+   - 変更後の権限設定を記録
+   - 変更者・変更日時を記録
+
+3. **キャッシュ無効化**
+   - テンプレート更新時に関連する権限キャッシュを無効化
+
+#### レスポンス
+```json
+{
+  "success": true,
+  "data": {
+    "template": {
+      "id": 5,
+      "name": "営業部権限（更新版）",
+      "description": "営業部向けの標準権限設定（2024年版）",
+      "updatedAt": "2024-01-20T15:00:00Z"
+    }
+  }
+}
+```
+
+#### エラーレスポンス（プリセット編集試行時）
+```json
+{
+  "success": false,
+  "error": {
+    "code": "PRESET_PROTECTED",
+    "message": "プリセットテンプレートは編集できません",
+    "details": {
+      "templateId": 1,
+      "templateName": "管理者権限",
+      "isPreset": true
+    }
+  }
+}
+```
+
+#### HTTPステータスコード
+- `200`: 更新成功
+- `400`: バリデーションエラー
+- `401`: 認証エラー
+- `403`: 権限不足またはプリセット保護
+- `404`: テンプレートが見つからない
+- `500`: サーバーエラー
+
+#### 権限要件
+- ロール: ADMIN のみ
+
+---
+
+### 13.5 権限テンプレート削除
+**DELETE** `/api/permissions/templates/{templateId}`
+
+#### 概要
+権限テンプレートを削除します。プリセットテンプレートは削除不可です。
+
+#### パスパラメータ
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| templateId | integer | ○ | テンプレートID |
+
+#### ビジネスルール
+1. **プリセットテンプレート保護**
+   - `isPreset = true` のテンプレートは削除不可
+
+2. **論理削除**
+   - 物理削除ではなく `isActive = false` に設定
+   - データの完全性を保持
+
+3. **影響確認**
+   - テンプレート使用中の部署がある場合は警告
+   - 強制削除フラグ (`force=true`) で削除可能
+
+4. **監査ログ**
+   - 削除実行者・削除日時を記録
+   - 削除されたテンプレート情報を記録
+
+#### クエリパラメータ
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| force | boolean | - | 強制削除フラグ（デフォルト: false） |
+
+#### レスポンス
+```json
+{
+  "success": true,
+  "data": {
+    "message": "権限テンプレートを削除しました",
+    "templateId": 5,
+    "deletedAt": "2024-01-20T16:00:00Z"
+  }
+}
+```
+
+#### エラーレスポンス（使用中テンプレート削除試行時）
+```json
+{
+  "success": false,
+  "error": {
+    "code": "TEMPLATE_IN_USE",
+    "message": "このテンプレートは現在使用されているため削除できません",
+    "details": {
+      "templateId": 5,
+      "usedByDepartments": [
+        { "id": 10, "name": "営業部" },
+        { "id": 11, "name": "営業1課" }
+      ],
+      "hint": "強制削除する場合は force=true パラメータを指定してください"
+    }
+  }
+}
+```
+
+#### HTTPステータスコード
+- `200`: 削除成功
+- `401`: 認証エラー
+- `403`: 権限不足またはプリセット保護
+- `404`: テンプレートが見つからない
+- `409`: 使用中テンプレート（force=false時）
+- `500`: サーバーエラー
+
+#### 権限要件
+- ロール: ADMIN のみ
+
+---
+
+### 13.6 権限テンプレート適用
+**POST** `/api/permissions/templates/{templateId}/apply`
+
+#### 概要
+指定された部署に権限テンプレートを適用します。既存の権限設定は上書きされます。
+
+#### パスパラメータ
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| templateId | integer | ○ | テンプレートID |
+
+#### リクエストボディ
+```json
+{
+  "departmentIds": [10, 11, 12],
+  "overwrite": true,
+  "notify": false
+}
+```
+
+#### リクエストパラメータ詳細
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| departmentIds | integer[] | ○ | 適用対象の部署ID配列 |
+| overwrite | boolean | - | 既存権限上書きフラグ（デフォルト: true） |
+| notify | boolean | - | 部署メンバーへの通知フラグ（デフォルト: false） |
+
+#### 処理フロー
+1. **テンプレート存在確認**
+2. **部署存在確認・権限チェック**
+3. **既存権限のバックアップ**（監査ログ）
+4. **トランザクション開始**
+5. **権限設定の上書き**
+   - 既存の `department_feature_permissions` レコード削除
+   - テンプレートから新規レコード作成
+6. **監査ログ記録**
+   - 適用前の権限状態
+   - 適用後の権限状態
+   - 適用者・適用日時
+7. **通知送信**（notify=true時）
+8. **トランザクションコミット**
+9. **権限キャッシュ無効化**
+
+#### レスポンス
+```json
+{
+  "success": true,
+  "data": {
+    "message": "権限テンプレートを3部署に適用しました",
+    "templateId": 5,
+    "templateName": "営業部権限",
+    "appliedDepartments": [
+      { "id": 10, "name": "営業部", "userCount": 25 },
+      { "id": 11, "name": "営業1課", "userCount": 12 },
+      { "id": 12, "name": "営業2課", "userCount": 13 }
+    ],
+    "affectedUsers": 50,
+    "appliedAt": "2024-01-20T17:00:00Z",
+    "auditLogId": 1234
+  }
+}
+```
+
+#### エラーレスポンス（権限不足時）
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INSUFFICIENT_PERMISSION",
+    "message": "指定された部署への権限適用権限がありません",
+    "details": {
+      "templateId": 5,
+      "unauthorizedDepartments": [
+        { "id": 12, "name": "営業2課" }
+      ]
+    }
+  }
+}
+```
+
+#### HTTPステータスコード
+- `200`: 適用成功
+- `400`: バリデーションエラー（部署ID不正等）
+- `401`: 認証エラー
+- `403`: 権限不足
+- `404`: テンプレートまたは部署が見つからない
+- `500`: サーバーエラー
+
+#### 権限要件
+- ロール: ADMIN のみ
+
+#### セキュリティ考慮事項
+- **監査ログの完全性**: 全ての権限変更を記録
+- **原子性保証**: トランザクションによる一括適用
+- **ロールバック機能**: 適用失敗時の自動復元
+
+---
+
+### 13.7 権限マトリクス取得
+**GET** `/api/permissions/matrix`
+
+#### 概要
+部署×機能の権限マトリクスを取得します。権限の可視化と一括確認が可能です。
+
+#### リクエストパラメータ
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| companyId | integer | ○ | 会社ID |
+| departmentIds | integer[] | - | 部署ID配列（指定なしは全部署） |
+| featureIds | integer[] | - | 機能ID配列（指定なしは全機能） |
+| includeInactive | boolean | - | 無効部署を含むか（デフォルト: false） |
+
+#### レスポンス
+```json
+{
+  "success": true,
+  "data": {
+    "matrix": {
+      "departments": [
+        {
+          "id": 10,
+          "name": "営業部",
+          "level": 2,
+          "isActive": true
+        }
+      ],
+      "features": [
+        {
+          "id": 1,
+          "code": "USER_MGMT",
+          "name": "ユーザー管理",
+          "category": "SYSTEM"
+        }
+      ],
+      "permissions": [
+        {
+          "departmentId": 10,
+          "featureId": 1,
+          "canView": true,
+          "canCreate": false,
+          "canEdit": false,
+          "canDelete": false,
+          "canApprove": false,
+          "canExport": true,
+          "source": "TEMPLATE",
+          "templateId": 5,
+          "templateName": "営業部権限"
+        }
+      ]
+    },
+    "summary": {
+      "totalDepartments": 5,
+      "totalFeatures": 15,
+      "totalPermissions": 75,
+      "templateBasedPermissions": 60,
+      "customPermissions": 15
+    }
+  }
+}
+```
+
+#### HTTPステータスコード
+- `200`: 成功
+- `401`: 認証エラー
+- `403`: 権限不足
+- `500`: サーバーエラー
+
+#### 権限要件
+- ロール: ADMIN または MANAGER
+
+#### パフォーマンス考慮事項
+- **データ量制限**: 最大100部署×50機能
+- **ページネーション**: 大量データ時は分割取得推奨
+- **キャッシング**: 5分間のキャッシュ適用
+
+---
+
+## 14. エラーコード一覧（権限テンプレート関連）
+
+| エラーコード | HTTPステータス | 説明 | 対処方法 |
+|------------|-------------|------|---------|
+| TEMPLATE_NOT_FOUND | 404 | テンプレートが見つかりません | テンプレートIDを確認してください |
+| PRESET_PROTECTED | 403 | プリセットテンプレートは編集・削除できません | カスタムテンプレートを作成してください |
+| TEMPLATE_IN_USE | 409 | テンプレートが使用中です | force=trueで強制削除または使用解除後に削除 |
+| DUPLICATE_TEMPLATE_NAME | 409 | 同名のテンプレートが存在します | 別のテンプレート名を指定してください |
+| INVALID_FEATURE_ID | 400 | 無効な機能IDが含まれています | 機能IDを確認してください |
+| INSUFFICIENT_PERMISSION | 403 | 権限が不足しています | 管理者権限が必要です |
+| VALIDATION_ERROR | 400 | バリデーションエラー | リクエストパラメータを確認してください |
+
+---
+
+## 15. 権限テンプレートAPI使用例
+
+### 15.1 テンプレート作成から適用までの流れ
+
+```typescript
+// 1. 新規テンプレート作成
+const createResponse = await fetch('/api/permissions/templates', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    companyId: 1,
+    name: '営業部権限',
+    description: '営業部向けの標準権限設定',
+    category: 'CUSTOM',
+    features: [
+      { featureId: 1, canView: true, canCreate: true, canEdit: false },
+      { featureId: 2, canView: true, canCreate: true, canEdit: true }
+    ]
+  })
+});
+
+const { data: { template } } = await createResponse.json();
+console.log('作成されたテンプレートID:', template.id);
+
+// 2. テンプレート適用
+const applyResponse = await fetch(`/api/permissions/templates/${template.id}/apply`, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    departmentIds: [10, 11, 12],
+    overwrite: true,
+    notify: true
+  })
+});
+
+const { data } = await applyResponse.json();
+console.log(`${data.affectedUsers}名のユーザーに権限を適用しました`);
+
+// 3. 権限マトリクス確認
+const matrixResponse = await fetch(
+  `/api/permissions/matrix?companyId=1&departmentIds=10,11,12`,
+  {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  }
+);
+
+const { data: { matrix } } = await matrixResponse.json();
+console.log('権限マトリクス:', matrix);
+```
+
+### 15.2 エラーハンドリング例
+
+```typescript
+try {
+  const response = await fetch(`/api/permissions/templates/${templateId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+
+  const result = await response.json();
+
+  if (!result.success) {
+    switch (result.error.code) {
+      case 'PRESET_PROTECTED':
+        alert('プリセットテンプレートは削除できません');
+        break;
+      case 'TEMPLATE_IN_USE':
+        const departments = result.error.details.usedByDepartments;
+        const confirm = window.confirm(
+          `このテンプレートは${departments.length}部署で使用中です。強制削除しますか?`
+        );
+        if (confirm) {
+          // force=true で再実行
+          await deleteTemplate(templateId, true);
+        }
+        break;
+      default:
+        alert(`エラー: ${result.error.message}`);
+    }
+  }
+} catch (error) {
+  console.error('通信エラー:', error);
+  alert('サーバーとの通信に失敗しました');
+}
+```
