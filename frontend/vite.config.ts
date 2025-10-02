@@ -169,6 +169,7 @@ export default defineConfig({
     port: 3000,
     fs: {
       allow: [
+        "/app",
         // フォントファイルアクセス許可（拡張）
         '/home/typho/src/elementplus/websys/workspace',
         '/home/typho/src/elementplus/websys/node_modules',

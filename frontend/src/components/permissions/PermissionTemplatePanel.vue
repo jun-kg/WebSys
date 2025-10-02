@@ -1,6 +1,7 @@
 <template>
   <el-dialog
-    v-model="visible"
+    :model-value="visible"
+    @update:model-value="$emit('update:visible', $event)"
     title="権限テンプレート管理"
     width="800px"
     :destroy-on-close="true"

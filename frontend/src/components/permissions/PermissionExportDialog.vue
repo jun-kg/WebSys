@@ -1,6 +1,7 @@
 <template>
   <el-dialog
-    v-model="visible"
+    :model-value="visible"
+    @update:model-value="$emit('close')"
     title="権限情報エクスポート"
     width="500px"
     @closed="$emit('closed')"

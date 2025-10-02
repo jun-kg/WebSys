@@ -1,6 +1,7 @@
 <template>
   <el-dialog
-    v-model="visible"
+    :model-value="visible"
+    @update:model-value="$emit('update:visible', $event)"
     :title="`権限設定: ${departmentName} - ${feature?.name}`"
     width="500px"
     @closed="$emit('closed')"

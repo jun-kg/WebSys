@@ -92,13 +92,13 @@
 
       <div class="pagination" v-if="total > 0">
         <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
+          :current-page="currentPage"
+          :page-size="pageSize"
           :total="total"
           :page-sizes="[10, 20, 50, 100]"
           layout="total, sizes, prev, pager, next, jumper"
-          @current-change="$emit('page-change', currentPage)"
-          @size-change="$emit('page-size-change', pageSize)"
+          @current-change="$emit('page-change', $event)"
+          @size-change="$emit('page-size-change', $event)"
         />
       </div>
     </el-card>
