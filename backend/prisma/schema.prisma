@@ -1,3 +1,6 @@
+// ============================================
+// Prisma Configuration
+// ============================================
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,336 +10,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model alert_rules {
-  id                   Int       @id @default(autoincrement())
-  name                 String    
-  description          String?
-  category             String?   
-  source               String?   
-  messagePattern       String?
-  thresholdCount       Int       @default(1)
-  thresholdPeriod      Int       @default(300)
-  notificationChannels String[]
-  isEnabled            Boolean   @default(true)
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime
-  level                LogLevel?
-}
+// ============================================
+// 🔒 CORE MODELS (共通コア - 変更禁止)
+// ============================================
+// システム基盤となるモデル。全プロジェクトで共有。
+// 変更は共通ライブラリ更新として扱う。
 
-model audit_logs {
-  id             Int       @id @default(autoincrement())
-  userId         Int
-  action         String    
-  targetType     String    
-  targetId       Int
-  featureId      Int?
-  oldPermissions Json?
-  newPermissions Json?
-  reason         String?
-  ipAddress      String?   
-  userAgent      String?
-  createdAt      DateTime  @default(now())
-  features       features? @relation(fields: [featureId], references: [id])
-  users          users     @relation(fields: [userId], references: [id])
-
-  @@index([action])
-  @@index([createdAt(sort: Desc)])
-  @@index([featureId])
-  @@index([targetType, targetId])
-  @@index([userId])
-}
-
-model companies {
-  id                   Int                    @id @default(autoincrement())
-  code                 String                 @unique
-  name                 String
-  nameKana             String?
-  industry             String?
-  establishedDate      DateTime?
-  employeeCount        Int?
-  address              String?
-  phone                String?
-  email                String?
-  contractPlan         String                 @default("STANDARD")
-  maxUsers             Int                    @default(100)
-  isActive             Boolean                @default(true)
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime
-  createdBy            Int?
-  updatedBy            Int?
-  departments          departments[]
-  permission_templates permission_templates[]
-  users                users[]
-  security_settings    security_settings[]
-  workflow_types       workflow_types[]
-  workflow_requests    workflow_requests[]
-
-  @@index([code])
-  @@index([isActive])
-}
-
-model department_feature_permissions {
-  id                                                    Int         @id @default(autoincrement())
-  departmentId                                          Int
-  featureId                                             Int
-  canView                                               Boolean     @default(false)
-  canCreate                                             Boolean     @default(false)
-  canEdit                                               Boolean     @default(false)
-  canDelete                                             Boolean     @default(false)
-  canApprove                                            Boolean     @default(false)
-  canExport                                             Boolean     @default(false)
-  inheritFromParent                                     Boolean     @default(true)
-  createdAt                                             DateTime    @default(now())
-  updatedAt                                             DateTime
-  createdBy                                             Int?
-  updatedBy                                             Int?
-  users_department_feature_permissions_createdByTousers users?      @relation("department_feature_permissions_createdByTousers", fields: [createdBy], references: [id])
-  departments                                           departments @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  features                                              features    @relation(fields: [featureId], references: [id], onDelete: Cascade)
-  users_department_feature_permissions_updatedByTousers users?      @relation("department_feature_permissions_updatedByTousers", fields: [updatedBy], references: [id])
-
-  @@unique([departmentId, featureId])
-  @@index([departmentId])
-  @@index([featureId])
-}
-
-model departments {
-  id                             Int                              @id @default(autoincrement())
-  companyId                      Int
-  code                           String
-  name                           String
-  nameKana                       String?
-  parentId                       Int?
-  level                          Int                              @default(1)
-  path                           String?
-  displayOrder                   Int                              @default(0)
-  isActive                       Boolean                          @default(true)
-  createdAt                      DateTime                         @default(now())
-  updatedAt                      DateTime
-  createdBy                      Int?
-  updatedBy                      Int?
-  department_feature_permissions department_feature_permissions[]
-  permission_inheritance_rules   permission_inheritance_rules[]
-  companies                      companies                        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  departments                    departments?                     @relation("departmentsTodepartments", fields: [parentId], references: [id])
-  other_departments              departments[]                    @relation("departmentsTodepartments")
-  user_departments               user_departments[]
-  users                          users[]
-  workflow_requests              workflow_requests[]
-
-  @@unique([companyId, code])
-  @@index([companyId])
-  @@index([isActive])
-  @@index([parentId])
-  @@index([path])
-}
-
-model features {
-  id                             Int                              @id @default(autoincrement())
-  code                           String                           @unique 
-  name                           String                           
-  description                    String?
-  category                       String                           
-  parentId                       Int?
-  path                           String?
-  urlPattern                     String?                          
-  apiPattern                     String?                          
-  icon                           String?                          
-  displayOrder                   Int                              @default(0)
-  isMenuItem                     Boolean                          @default(true)
-  isActive                       Boolean                          @default(true)
-  createdAt                      DateTime                         @default(now())
-  updatedAt                      DateTime
-  audit_logs                     audit_logs[]
-  department_feature_permissions department_feature_permissions[]
-  permission_inheritance_rules   permission_inheritance_rules[]
-  features                       features?                        @relation("featuresTofeatures", fields: [parentId], references: [id])
-  other_features                 features[]                       @relation("featuresTofeatures")
-  permission_template_details    permission_template_details[]
-  permission_template_features   permission_template_features[]
-
-  @@index([category])
-  @@index([code])
-  @@index([isActive])
-  @@index([parentId])
-}
-
-model log_categories {
-  id          Int      @id @default(autoincrement())
-  code        String   @unique 
-  name        String   
-  description String?
-  color       String   @default("#666666") 
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime
-  logs        logs[]
-
-  @@index([code])
-}
-
-model log_statistics {
-  id       Int      @id @default(autoincrement())
-  date     DateTime 
-  hour     Int?     
-  category String   
-  source   String   
-  count    Int      @default(0)
-  level    LogLevel
-
-  @@unique([date, hour, level, category, source])
-  @@index([date(sort: Desc)])
-}
-
-model logs {
-  id             BigInt          @id @default(autoincrement())
-  timestamp      DateTime        @default(now())
-  message        String
-  userId         Int?
-  source         String          
-  environment    String          @default("development") 
-  createdAt      DateTime        @default(now())
-  categoryId     Int?
-  context        Json?
-  level          LogLevel
-  log_categories log_categories? @relation(fields: [categoryId], references: [id])
-  users          users?          @relation(fields: [userId], references: [id])
-
-  @@index([categoryId])
-  @@index([environment])
-  @@index([level])
-  @@index([source])
-  @@index([timestamp(sort: Desc)])
-  @@index([userId])
-}
-
-model message_definitions {
-  id              Int               @id @default(autoincrement())
-  code            String            @unique 
-  category        String            
-  type            MessageType
-  messageJa       String
-  messageEn       String?
-  description     String?
-  isActive        Boolean           @default(true)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime
-  system_messages system_messages[]
-
-  @@index([category])
-  @@index([code])
-  @@index([type])
-}
-
-model permission_template_details {
-  id                   Int                  @id @default(autoincrement())
-  templateId           Int
-  featureId            Int
-  canView              Boolean              @default(false)
-  canCreate            Boolean              @default(false)
-  canEdit              Boolean              @default(false)
-  canDelete            Boolean              @default(false)
-  canApprove           Boolean              @default(false)
-  canExport            Boolean              @default(false)
-  features             features             @relation(fields: [featureId], references: [id])
-  permission_templates permission_templates @relation(fields: [templateId], references: [id], onDelete: Cascade)
-
-  @@unique([templateId, featureId])
-}
-
-model permission_template_features {
-  id                   Int                  @id @default(autoincrement())
-  templateId           Int
-  featureId            Int
-  canView              Boolean              @default(false)
-  canCreate            Boolean              @default(false)
-  canEdit              Boolean              @default(false)
-  canDelete            Boolean              @default(false)
-  canApprove           Boolean              @default(false)
-  canExport            Boolean              @default(false)
-  features             features             @relation(fields: [featureId], references: [id])
-  permission_templates permission_templates @relation(fields: [templateId], references: [id], onDelete: Cascade)
-
-  @@unique([templateId, featureId])
-}
-
-model permission_templates {
-  id                                          Int                            @id @default(autoincrement())
-  name                                        String                         
-  description                                 String?
-  departmentType                              String?                        
-  companyId                                   Int?
-  isSystemTemplate                            Boolean                        @default(false)
-  category                                    String                         @default("CUSTOM") 
-  isPreset                                    Boolean                        @default(false)
-  isActive                                    Boolean                        @default(true)
-  displayOrder                                Int                            @default(0)
-  createdAt                                   DateTime                       @default(now())
-  updatedAt                                   DateTime
-  createdBy                                   Int?
-  updatedBy                                   Int?
-  permission_template_details                 permission_template_details[]
-  permission_template_features                permission_template_features[]
-  companies                                   companies?                     @relation(fields: [companyId], references: [id])
-  users_permission_templates_createdByTousers users?                         @relation("permission_templates_createdByTousers", fields: [createdBy], references: [id])
-  users_permission_templates_updatedByTousers users?                         @relation("permission_templates_updatedByTousers", fields: [updatedBy], references: [id])
-}
-
-model system_messages {
-  id                  Int                 @id @default(autoincrement())
-  definitionId        Int
-  userId              Int?
-  customMessage       String?
-  context             Json?
-  isRead              Boolean             @default(false)
-  createdAt           DateTime            @default(now())
-  readAt              DateTime?
-  message_definitions message_definitions @relation(fields: [definitionId], references: [id])
-  users               users?              @relation(fields: [userId], references: [id])
-
-  @@index([createdAt(sort: Desc)])
-  @@index([definitionId])
-  @@index([isRead])
-  @@index([userId])
-}
-
-model user_departments {
-  id           Int         @id @default(autoincrement())
-  userId       Int
-  departmentId Int
-  isPrimary    Boolean     @default(false)
-  role         String      @default("MEMBER") 
-  assignedDate DateTime    @default(now()) 
-  expiredDate  DateTime?   
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime
-  departments  departments @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  users        users       @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, departmentId])
-  @@index([departmentId])
-  @@index([isPrimary])
-  @@index([userId])
-}
-
-model user_sessions {
-  id           Int      @id @default(autoincrement())
-  userId       Int
-  sessionToken String   @unique
-  ipAddress    String?  
-  userAgent    String?
-  expiresAt    DateTime
-  lastActivity DateTime @default(now())
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime
-  users        users    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([expiresAt])
-  @@index([isActive])
-  @@index([sessionToken])
-  @@index([userId])
-}
+// --- Authentication & Authorization ---
+// 認証・認可の基盤モデル
 
 model users {
   id                                                                             Int                              @id @default(autoincrement())
@@ -393,30 +74,216 @@ model users {
   @@index([role])
 }
 
-enum LogLevel {
-  TRACE
-  DEBUG
-  INFO
-  WARN
-  ERROR
-  FATAL
+model companies {
+  id                   Int                    @id @default(autoincrement())
+  code                 String                 @unique
+  name                 String
+  nameKana             String?
+  industry             String?
+  establishedDate      DateTime?
+  employeeCount        Int?
+  address              String?
+  phone                String?
+  email                String?
+  contractPlan         String                 @default("STANDARD")
+  maxUsers             Int                    @default(100)
+  isActive             Boolean                @default(true)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime
+  createdBy            Int?
+  updatedBy            Int?
+  departments          departments[]
+  permission_templates permission_templates[]
+  users                users[]
+  security_settings    security_settings[]
+  workflow_types       workflow_types[]
+  workflow_requests    workflow_requests[]
+
+  @@index([code])
+  @@index([isActive])
 }
 
-enum MessageType {
-  INFO
-  SUCCESS
-  WARNING
-  ERROR
+model departments {
+  id                             Int                              @id @default(autoincrement())
+  companyId                      Int
+  code                           String
+  name                           String
+  nameKana                       String?
+  parentId                       Int?
+  level                          Int                              @default(1)
+  path                           String?
+  displayOrder                   Int                              @default(0)
+  isActive                       Boolean                          @default(true)
+  createdAt                      DateTime                         @default(now())
+  updatedAt                      DateTime
+  createdBy                      Int?
+  updatedBy                      Int?
+  department_feature_permissions department_feature_permissions[]
+  permission_inheritance_rules   permission_inheritance_rules[]
+  companies                      companies                        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  departments                    departments?                     @relation("departmentsTodepartments", fields: [parentId], references: [id])
+  other_departments              departments[]                    @relation("departmentsTodepartments")
+  user_departments               user_departments[]
+  users                          users[]
+  workflow_requests              workflow_requests[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([isActive])
+  @@index([parentId])
+  @@index([path])
 }
 
-enum UserRole {
-  ADMIN
-  USER
-  GUEST
-  MANAGER
+model user_departments {
+  id           Int         @id @default(autoincrement())
+  userId       Int
+  departmentId Int
+  isPrimary    Boolean     @default(false)
+  role         String      @default("MEMBER")
+  assignedDate DateTime    @default(now())
+  expiredDate  DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime
+  departments  departments @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  users        users       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, departmentId])
+  @@index([departmentId])
+  @@index([isPrimary])
+  @@index([userId])
 }
 
-// 権限継承ルールテーブル
+model user_sessions {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  sessionToken String   @unique
+  ipAddress    String?
+  userAgent    String?
+  expiresAt    DateTime
+  lastActivity DateTime @default(now())
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+  users        users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([isActive])
+  @@index([sessionToken])
+  @@index([userId])
+}
+
+// --- Permission Management (RBAC) ---
+// 権限管理・RBAC機能
+
+model features {
+  id                             Int                              @id @default(autoincrement())
+  code                           String                           @unique
+  name                           String
+  description                    String?
+  category                       String
+  parentId                       Int?
+  path                           String?
+  urlPattern                     String?
+  apiPattern                     String?
+  icon                           String?
+  displayOrder                   Int                              @default(0)
+  isMenuItem                     Boolean                          @default(true)
+  isActive                       Boolean                          @default(true)
+  createdAt                      DateTime                         @default(now())
+  updatedAt                      DateTime
+  audit_logs                     audit_logs[]
+  department_feature_permissions department_feature_permissions[]
+  permission_inheritance_rules   permission_inheritance_rules[]
+  features                       features?                        @relation("featuresTofeatures", fields: [parentId], references: [id])
+  other_features                 features[]                       @relation("featuresTofeatures")
+  permission_template_details    permission_template_details[]
+  permission_template_features   permission_template_features[]
+
+  @@index([category])
+  @@index([code])
+  @@index([isActive])
+  @@index([parentId])
+}
+
+model department_feature_permissions {
+  id                                                    Int         @id @default(autoincrement())
+  departmentId                                          Int
+  featureId                                             Int
+  canView                                               Boolean     @default(false)
+  canCreate                                             Boolean     @default(false)
+  canEdit                                               Boolean     @default(false)
+  canDelete                                             Boolean     @default(false)
+  canApprove                                            Boolean     @default(false)
+  canExport                                             Boolean     @default(false)
+  inheritFromParent                                     Boolean     @default(true)
+  createdAt                                             DateTime    @default(now())
+  updatedAt                                             DateTime
+  createdBy                                             Int?
+  updatedBy                                             Int?
+  users_department_feature_permissions_createdByTousers users?      @relation("department_feature_permissions_createdByTousers", fields: [createdBy], references: [id])
+  departments                                           departments @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  features                                              features    @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  users_department_feature_permissions_updatedByTousers users?      @relation("department_feature_permissions_updatedByTousers", fields: [updatedBy], references: [id])
+
+  @@unique([departmentId, featureId])
+  @@index([departmentId])
+  @@index([featureId])
+}
+
+model permission_templates {
+  id                                          Int                            @id @default(autoincrement())
+  name                                        String
+  description                                 String?
+  departmentType                              String?
+  companyId                                   Int?
+  isSystemTemplate                            Boolean                        @default(false)
+  category                                    String                         @default("CUSTOM")
+  isPreset                                    Boolean                        @default(false)
+  isActive                                    Boolean                        @default(true)
+  displayOrder                                Int                            @default(0)
+  createdAt                                   DateTime                       @default(now())
+  updatedAt                                   DateTime
+  createdBy                                   Int?
+  updatedBy                                   Int?
+  permission_template_details                 permission_template_details[]
+  permission_template_features                permission_template_features[]
+  companies                                   companies?                     @relation(fields: [companyId], references: [id])
+  users_permission_templates_createdByTousers users?                         @relation("permission_templates_createdByTousers", fields: [createdBy], references: [id])
+  users_permission_templates_updatedByTousers users?                         @relation("permission_templates_updatedByTousers", fields: [updatedBy], references: [id])
+}
+
+model permission_template_details {
+  id                   Int                  @id @default(autoincrement())
+  templateId           Int
+  featureId            Int
+  canView              Boolean              @default(false)
+  canCreate            Boolean              @default(false)
+  canEdit              Boolean              @default(false)
+  canDelete            Boolean              @default(false)
+  canApprove           Boolean              @default(false)
+  canExport            Boolean              @default(false)
+  features             features             @relation(fields: [featureId], references: [id])
+  permission_templates permission_templates @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, featureId])
+}
+
+model permission_template_features {
+  id                   Int                  @id @default(autoincrement())
+  templateId           Int
+  featureId            Int
+  canView              Boolean              @default(false)
+  canCreate            Boolean              @default(false)
+  canEdit              Boolean              @default(false)
+  canDelete            Boolean              @default(false)
+  canApprove           Boolean              @default(false)
+  canExport            Boolean              @default(false)
+  features             features             @relation(fields: [featureId], references: [id])
+  permission_templates permission_templates @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, featureId])
+}
+
 model permission_inheritance_rules {
   id              Int      @id @default(autoincrement())
   departmentId    Int
@@ -444,11 +311,233 @@ model permission_inheritance_rules {
   @@index([isActive])
 }
 
-// ====================================
-// 申請・承認ワークフロー関連テーブル
-// ====================================
+// --- Audit & Logging ---
+// 監査ログ・システムログ
 
-// ワークフロータイプ定義テーブル
+model audit_logs {
+  id             Int       @id @default(autoincrement())
+  userId         Int
+  action         String
+  targetType     String
+  targetId       Int
+  featureId      Int?
+  oldPermissions Json?
+  newPermissions Json?
+  reason         String?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime  @default(now())
+  features       features? @relation(fields: [featureId], references: [id])
+  users          users     @relation(fields: [userId], references: [id])
+
+  @@index([action])
+  @@index([createdAt(sort: Desc)])
+  @@index([featureId])
+  @@index([targetType, targetId])
+  @@index([userId])
+}
+
+model logs {
+  id             BigInt          @id @default(autoincrement())
+  timestamp      DateTime        @default(now())
+  message        String
+  userId         Int?
+  source         String
+  environment    String          @default("development")
+  createdAt      DateTime        @default(now())
+  categoryId     Int?
+  context        Json?
+  level          LogLevel
+  log_categories log_categories? @relation(fields: [categoryId], references: [id])
+  users          users?          @relation(fields: [userId], references: [id])
+
+  @@index([categoryId])
+  @@index([environment])
+  @@index([level])
+  @@index([source])
+  @@index([timestamp(sort: Desc)])
+  @@index([userId])
+}
+
+model log_categories {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  name        String
+  description String?
+  color       String   @default("#666666")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  logs        logs[]
+
+  @@index([code])
+}
+
+model log_statistics {
+  id       Int      @id @default(autoincrement())
+  date     DateTime
+  hour     Int?
+  category String
+  source   String
+  count    Int      @default(0)
+  level    LogLevel
+
+  @@unique([date, hour, level, category, source])
+  @@index([date(sort: Desc)])
+}
+
+model alert_rules {
+  id                   Int       @id @default(autoincrement())
+  name                 String
+  description          String?
+  category             String?
+  source               String?
+  messagePattern       String?
+  thresholdCount       Int       @default(1)
+  thresholdPeriod      Int       @default(300)
+  notificationChannels String[]
+  isEnabled            Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime
+  level                LogLevel?
+}
+
+// --- Messaging & Notifications ---
+// メッセージ・通知管理
+
+model message_definitions {
+  id              Int               @id @default(autoincrement())
+  code            String            @unique
+  category        String
+  type            MessageType
+  messageJa       String
+  messageEn       String?
+  description     String?
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  system_messages system_messages[]
+
+  @@index([category])
+  @@index([code])
+  @@index([type])
+}
+
+model system_messages {
+  id                  Int                 @id @default(autoincrement())
+  definitionId        Int
+  userId              Int?
+  customMessage       String?
+  context             Json?
+  isRead              Boolean             @default(false)
+  createdAt           DateTime            @default(now())
+  readAt              DateTime?
+  message_definitions message_definitions @relation(fields: [definitionId], references: [id])
+  users               users?              @relation(fields: [userId], references: [id])
+
+  @@index([createdAt(sort: Desc)])
+  @@index([definitionId])
+  @@index([isRead])
+  @@index([userId])
+}
+
+// --- Security ---
+// セキュリティ機能
+
+model refresh_tokens {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  jti         String   @unique // JWT ID
+  tokenHash   String   // トークンのハッシュ
+  expiresAt   DateTime
+  isActive    Boolean  @default(true)
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([jti])
+  @@index([expiresAt])
+  @@index([isActive])
+}
+
+model security_events {
+  id          Int      @id @default(autoincrement())
+  type        String   // LOGIN_SUCCESS, LOGIN_FAILED, TOKEN_REFRESH, LOGOUT, SUSPICIOUS_ACTIVITY
+  userId      Int?
+  ipAddress   String
+  userAgent   String?
+  details     String?  // JSON形式の詳細情報
+  timestamp   DateTime @default(now())
+
+  users       users?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([type])
+  @@index([userId])
+  @@index([ipAddress])
+  @@index([timestamp])
+}
+
+model login_attempts {
+  id          Int      @id @default(autoincrement())
+  identifier  String   // IP + username
+  attempts    Int      @default(1)
+  lockedUntil DateTime?
+  lastAttempt DateTime @default(now())
+  isLocked    Boolean  @default(false)
+
+  @@index([identifier])
+  @@index([lockedUntil])
+  @@index([isLocked])
+}
+
+model security_settings {
+  id                    Int      @id @default(autoincrement())
+  companyId             Int
+  maxLoginAttempts      Int      @default(5)
+  lockoutDurationMinutes Int     @default(30)
+  passwordMinLength     Int      @default(8)
+  passwordRequireUpper  Boolean  @default(true)
+  passwordRequireLower  Boolean  @default(true)
+  passwordRequireNumber Boolean  @default(true)
+  passwordRequireSymbol Boolean  @default(false)
+  sessionTimeoutMinutes Int      @default(480) // 8時間
+  enableTwoFactor       Boolean  @default(false)
+  allowedIpRanges       String[] // CIDR形式
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  companies             companies @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId])
+  @@index([companyId])
+}
+
+// ============================================
+// 🔌 EXTENSION MODELS (拡張可能)
+// ============================================
+// 企業がカスタマイズ可能なモデル。
+// カラム追加・リレーション追加は許可。
+
+// --- Extended User Profiles ---
+// ユーザープロファイル拡張用
+// 例: model ext_user_profiles {
+//   id     Int  @id @default(autoincrement())
+//   userId Int  @unique
+//   users  users @relation(fields: [userId], references: [id])
+//   // カスタムフィールドを追加可能
+// }
+
+// ============================================
+// 🏢 CUSTOM MODELS (企業固有)
+// ============================================
+// 完全に企業独自のモデル。自由に追加・変更可能。
+
+// --- Workflow Management ---
+// ワークフロー・承認申請システム
+
 model workflow_types {
   id                   Int                    @id @default(autoincrement())
   companyId           Int
@@ -486,7 +575,6 @@ model workflow_types {
   @@index([isActive])
 }
 
-// 承認ルート定義テーブル
 model approval_routes {
   id                  Int                    @id @default(autoincrement())
   workflowTypeId      Int
@@ -516,7 +604,6 @@ model approval_routes {
   @@index([isActive])
 }
 
-// ワークフロー申請テーブル
 model workflow_requests {
   id                  Int                    @id @default(autoincrement())
   workflowTypeId      Int
@@ -567,7 +654,6 @@ model workflow_requests {
   @@index([requestNumber])
 }
 
-// 承認履歴テーブル
 model approval_history {
   id                  Int                    @id @default(autoincrement())
   requestId           Int
@@ -600,7 +686,6 @@ model approval_history {
   @@index([processedAt])
 }
 
-// 承認代理設定テーブル
 model approval_delegates {
   id                  Int                    @id @default(autoincrement())
   delegatorId         Int
@@ -627,7 +712,6 @@ model approval_delegates {
   @@index([isActive])
 }
 
-// ワークフロー通知テーブル
 model workflow_notifications {
   id                  Int                    @id @default(autoincrement())
   requestId           Int
@@ -655,7 +739,6 @@ model workflow_notifications {
   @@index([createdAt])
 }
 
-// ワークフロー添付ファイルテーブル
 model workflow_attachments {
   id                  Int                    @id @default(autoincrement())
   requestId           Int
@@ -679,7 +762,6 @@ model workflow_attachments {
   @@index([isDeleted])
 }
 
-// 自動承認ルールテーブル
 model auto_approval_rules {
   id                  Int                    @id @default(autoincrement())
   workflowTypeId      Int
@@ -703,7 +785,6 @@ model auto_approval_rules {
   @@index([isActive])
 }
 
-// 自動承認ログテーブル
 model auto_approval_logs {
   id                  Int                    @id @default(autoincrement())
   requestId           Int
@@ -725,81 +806,28 @@ model auto_approval_logs {
   @@index([triggeredAt])
 }
 
-// ====================================
-// セキュリティ関連テーブル
-// ====================================
+// --- Enum Definitions ---
+// Enum型定義
 
-// リフレッシュトークンテーブル
-model refresh_tokens {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  jti         String   @unique // JWT ID
-  tokenHash   String   // トークンのハッシュ
-  expiresAt   DateTime
-  isActive    Boolean  @default(true)
-  revokedAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([jti])
-  @@index([expiresAt])
-  @@index([isActive])
+enum LogLevel {
+  TRACE
+  DEBUG
+  INFO
+  WARN
+  ERROR
+  FATAL
 }
 
-// セキュリティイベントテーブル
-model security_events {
-  id          Int      @id @default(autoincrement())
-  type        String   // LOGIN_SUCCESS, LOGIN_FAILED, TOKEN_REFRESH, LOGOUT, SUSPICIOUS_ACTIVITY
-  userId      Int?
-  ipAddress   String
-  userAgent   String?
-  details     String?  // JSON形式の詳細情報
-  timestamp   DateTime @default(now())
-
-  users       users?   @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([type])
-  @@index([userId])
-  @@index([ipAddress])
-  @@index([timestamp])
+enum MessageType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
 }
 
-// ログイン試行履歴テーブル
-model login_attempts {
-  id          Int      @id @default(autoincrement())
-  identifier  String   // IP + username
-  attempts    Int      @default(1)
-  lockedUntil DateTime?
-  lastAttempt DateTime @default(now())
-  isLocked    Boolean  @default(false)
-
-  @@index([identifier])
-  @@index([lockedUntil])
-  @@index([isLocked])
-}
-
-// セキュリティ設定テーブル
-model security_settings {
-  id                    Int      @id @default(autoincrement())
-  companyId             Int
-  maxLoginAttempts      Int      @default(5)
-  lockoutDurationMinutes Int     @default(30)
-  passwordMinLength     Int      @default(8)
-  passwordRequireUpper  Boolean  @default(true)
-  passwordRequireLower  Boolean  @default(true)
-  passwordRequireNumber Boolean  @default(true)
-  passwordRequireSymbol Boolean  @default(false)
-  sessionTimeoutMinutes Int      @default(480) // 8時間
-  enableTwoFactor       Boolean  @default(false)
-  allowedIpRanges       String[] // CIDR形式
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  companies             companies @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  @@unique([companyId])
-  @@index([companyId])
+enum UserRole {
+  ADMIN
+  USER
+  GUEST
+  MANAGER
 }
