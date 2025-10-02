@@ -257,7 +257,7 @@ const fetchStatistics = async () => {
       params.append('dateTo', dateRange.value[1].toISOString().split('T')[0])
     }
 
-    const response = await fetch(`/api/workflow/statistics?${params}`, {
+    const response = await fetch(`/api/workflow/dashboard/statistics?${params}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
