@@ -86,9 +86,73 @@ export class ApprovalService {
   }
 
   /**
-   * 承認ルートの一覧取得
+   * 承認ルートの一覧取得（ページネーション付き）
    */
-  async getApprovalRoutes(workflowTypeId: number) {
+  async getApprovalRoutes(params: {
+    companyId: number;
+    page: number;
+    limit: number;
+    search?: string;
+    workflowTypeId?: number;
+    isActive?: boolean;
+  }) {
+    const { companyId, page, limit, search, workflowTypeId, isActive } = params;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      workflow_types: {
+        companyId
+      }
+    };
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search } },
+        { workflow_types: { name: { contains: search } } }
+      ];
+    }
+
+    if (workflowTypeId) {
+      where.workflowTypeId = workflowTypeId;
+    }
+
+    if (isActive !== undefined) {
+      where.isActive = isActive;
+    }
+
+    const [routes, total] = await Promise.all([
+      prisma.approval_routes.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: [
+          { workflowTypeId: 'asc' },
+          { stepNumber: 'asc' }
+        ],
+        include: {
+          workflow_types: {
+            select: { id: true, name: true, code: true, category: true }
+          }
+        }
+      }),
+      prisma.approval_routes.count({ where })
+    ]);
+
+    return {
+      data: routes,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  }
+
+  /**
+   * 特定ワークフロータイプの承認ルート取得
+   */
+  async getApprovalRoutesByWorkflowType(workflowTypeId: number) {
     return await prisma.approval_routes.findMany({
       where: {
         workflowTypeId,
@@ -98,6 +162,25 @@ export class ApprovalService {
       include: {
         workflow_types: {
           select: { id: true, name: true, code: true }
+        }
+      }
+    });
+  }
+
+  /**
+   * 承認ルートIDで取得
+   */
+  async getApprovalRouteById(id: number, companyId: number) {
+    return await prisma.approval_routes.findFirst({
+      where: {
+        id,
+        workflow_types: {
+          companyId
+        }
+      },
+      include: {
+        workflow_types: {
+          select: { id: true, name: true, code: true, category: true }
         }
       }
     });
