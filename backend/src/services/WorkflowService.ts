@@ -813,7 +813,7 @@ export class WorkflowService {
       },
       include: {
         workflow_types: true,
-        users: {
+        requester: {
           select: {
             id: true,
             username: true,
@@ -856,7 +856,7 @@ export class WorkflowService {
         },
         include: {
           workflow_types: true,
-          users: {
+          requester: {
             select: {
               id: true,
               username: true,

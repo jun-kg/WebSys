@@ -22,6 +22,8 @@ import workflowDashboardRouter from './workflow-dashboard';
 import { authenticate } from '../../middleware/auth';
 import { performanceMonitor } from '../../middleware/performanceMonitor';
 import { featureFlags } from '../../utils/featureFlags';
+import { WorkflowService } from '../../services/WorkflowService';
+import { query, validationResult } from 'express-validator';
 
 const router = Router();
 
@@ -48,6 +50,53 @@ router.get('/health', (req, res) => {
 router.use('/types', workflowTypesRouter);
 router.use('/requests', workflowRequestsRouter);
 router.use('/dashboard', workflowDashboardRouter);
+
+// 承認待ち一覧エンドポイント（統合）
+router.get('/pending-approvals',
+  authenticate,
+  [
+    query('page').optional().isInt({ min: 1 }).withMessage('ページ番号は1以上の整数を指定してください'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('取得件数は1〜100の範囲で指定してください'),
+    query('search').optional().isString().withMessage('検索文字列は文字列を指定してください'),
+    query('workflowTypeId').optional().isInt({ min: 1 }).withMessage('ワークフロータイプIDは1以上の整数を指定してください'),
+    query('priority').optional().isIn(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).withMessage('優先度は LOW, MEDIUM, HIGH, URGENT のいずれかを指定してください')
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'バリデーションエラー',
+        errors: errors.array()
+      });
+    }
+
+    try {
+      const workflowService = new WorkflowService();
+      const companyId = req.user.companyId;
+      const userId = req.user.id;
+
+      const result = await workflowService.getPendingApprovals(
+        companyId,
+        userId,
+        req.query.page ? Number(req.query.page) : 1,
+        req.query.limit ? Number(req.query.limit) : 20
+      );
+
+      res.json({
+        success: true,
+        ...result
+      });
+    } catch (error) {
+      console.error('[Workflow] Error getting pending approvals:', error);
+      res.status(500).json({
+        success: false,
+        message: '承認待ち一覧の取得に失敗しました',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+);
 
 // Phase 3-4で作成されたマイクロサービス（フィーチャーフラグで制御）
 import emergencyApprovalRouter from './emergency-approval';

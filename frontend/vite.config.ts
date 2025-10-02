@@ -182,7 +182,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://websys_backend_dev:8000',
         changeOrigin: true,
         secure: false,
         timeout: 10000,
