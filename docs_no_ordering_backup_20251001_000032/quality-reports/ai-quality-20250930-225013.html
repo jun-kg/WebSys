@@ -1,0 +1,396 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI品質分析レポート - WebSys</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: #f8fafc; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px; text-align: center; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 30px; }
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; margin-bottom: 40px; }
+        .widget { background: white; border-radius: 16px; padding: 30px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .widget:hover { transform: translateY(-2px); }
+        .widget h3 { margin-top: 0; color: #2d3748; font-size: 1.3em; }
+        .score-circle { width: 120px; height: 120px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 20px auto; font-size: 2em; font-weight: bold; }
+        .score-excellent { background: linear-gradient(135deg, #48bb78, #38a169); color: white; }
+        .score-good { background: linear-gradient(135deg, #4299e1, #3182ce); color: white; }
+        .score-fair { background: linear-gradient(135deg, #ed8936, #dd6b20); color: white; }
+        .score-poor { background: linear-gradient(135deg, #f56565, #e53e3e); color: white; }
+        .file-analysis { background: white; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+        .file-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .file-name { font-size: 1.2em; font-weight: 600; color: #2d3748; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .metric { background: #f7fafc; padding: 15px; border-radius: 8px; text-align: center; }
+        .metric-value { font-size: 1.5em; font-weight: bold; color: #667eea; }
+        .metric-label { color: #718096; font-size: 0.9em; margin-top: 5px; }
+        .suggestions { margin-top: 20px; }
+        .suggestion { background: #ebf8ff; border-left: 4px solid #4299e1; padding: 15px; margin: 10px 0; border-radius: 0 8px 8px 0; }
+        .recommendations { background: white; border-radius: 16px; padding: 30px; margin-top: 30px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+        .recommendation { background: #f0fff4; border-left: 4px solid #48bb78; padding: 20px; margin: 15px 0; border-radius: 0 8px 8px 0; }
+        .recommendation h4 { margin: 0 0 10px 0; color: #2d3748; }
+        .chart-placeholder { background: #edf2f7; height: 200px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #718096; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 AI品質分析レポート</h1>
+        <p>WebSys Phase2 高度品質分析システム</p>
+        <p>生成日時: 2025年09月30日 22:50:13</p>
+    </div>
+
+    <div class="container">
+        <div class="dashboard">
+            <div class="widget">
+                <h3>📊 総合品質スコア</h3>
+                <div class="score-circle score-fair">
+                    70.27
+                </div>
+                <div style="text-align: center; color: #718096;">
+                    普通
+                </div>
+            </div>
+
+            <div class="widget">
+                <h3>📚 分析対象</h3>
+                <div class="metric-value">112</div>
+                <div class="metric-label">ファイル</div>
+            </div>
+
+            <div class="widget">
+                <h3>🏆 優秀ファイル</h3>
+                <div class="metric-value">0</div>
+                <div class="metric-label">90点以上</div>
+            </div>
+
+            <div class="widget">
+                <h3>⚠️ 要改善ファイル</h3>
+                <div class="metric-value">40</div>
+                <div class="metric-label">70点未満</div>
+            </div>
+        </div>
+
+        <div class="recommendations">
+            <h2>💡 AI推奨改善事項</h2>
+        
+            <div class="recommendation">
+                <h4>低品質ファイルの改善</h4>
+                <p><strong>説明:</strong> 40件のファイルが品質基準を下回っています</p>
+                <p><strong>推奨アクション:</strong> 見出し構造、リンク、視覚要素の追加・改善</p>
+            </div>
+            
+            <div class="recommendation">
+                <h4>見出し階層の改善</h4>
+                <p><strong>説明:</strong> 35件のファイルで見出し階層に問題があります</p>
+                <p><strong>推奨アクション:</strong> 適切な見出しレベル（h1→h2→h3）の使用</p>
+            </div>
+            
+        </div>
+
+        <h2>📋 ファイル別詳細分析</h2>
+        
+                <div class="file-analysis">
+                    <div class="file-header">
+                        <div class="file-name">08-コンポーネント仕様書.md</div>
+                        <div class="score-circle score-good" style="width: 60px; height: 60px; font-size: 1.2em;">
+                            83.38
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-value">2261</div>
+                            <div class="metric-label">単語数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">70</div>
+                            <div class="metric-label">見出し数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">8</div>
+                            <div class="metric-label">リンク数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">非常に読みやすい</div>
+                            <div class="metric-label">可読性</div>
+                        </div>
+                    </div>
+
+                    
+                </div>
+                
+                <div class="file-analysis">
+                    <div class="file-header">
+                        <div class="file-name">72-ドキュメント総合レビュー結果・改善計画書.md</div>
+                        <div class="score-circle score-good" style="width: 60px; height: 60px; font-size: 1.2em;">
+                            81.76
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-value">1645</div>
+                            <div class="metric-label">単語数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">104</div>
+                            <div class="metric-label">見出し数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">17</div>
+                            <div class="metric-label">リンク数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">非常に読みやすい</div>
+                            <div class="metric-label">可読性</div>
+                        </div>
+                    </div>
+
+                    
+                </div>
+                
+                <div class="file-analysis">
+                    <div class="file-header">
+                        <div class="file-name">70-共通機能保護戦略設計書.md</div>
+                        <div class="score-circle score-fair" style="width: 60px; height: 60px; font-size: 1.2em;">
+                            79.43
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-value">1245</div>
+                            <div class="metric-label">単語数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">48</div>
+                            <div class="metric-label">見出し数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">3</div>
+                            <div class="metric-label">リンク数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">非常に読みやすい</div>
+                            <div class="metric-label">可読性</div>
+                        </div>
+                    </div>
+
+                    
+                </div>
+                
+                <div class="file-analysis">
+                    <div class="file-header">
+                        <div class="file-name">MASTER_REFERENCE.md</div>
+                        <div class="score-circle score-fair" style="width: 60px; height: 60px; font-size: 1.2em;">
+                            79.4
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-value">393</div>
+                            <div class="metric-label">単語数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">32</div>
+                            <div class="metric-label">見出し数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">28</div>
+                            <div class="metric-label">リンク数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">非常に読みやすい</div>
+                            <div class="metric-label">可読性</div>
+                        </div>
+                    </div>
+
+                    
+                </div>
+                
+                <div class="file-analysis">
+                    <div class="file-header">
+                        <div class="file-name">11-レスポンシブデザインガイドライン.md</div>
+                        <div class="score-circle score-fair" style="width: 60px; height: 60px; font-size: 1.2em;">
+                            79.37
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-value">1247</div>
+                            <div class="metric-label">単語数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">35</div>
+                            <div class="metric-label">見出し数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">4</div>
+                            <div class="metric-label">リンク数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">非常に読みやすい</div>
+                            <div class="metric-label">可読性</div>
+                        </div>
+                    </div>
+
+                    
+                </div>
+                
+                <div class="file-analysis">
+                    <div class="file-header">
+                        <div class="file-name">機能一覧と概要.md</div>
+                        <div class="score-circle score-fair" style="width: 60px; height: 60px; font-size: 1.2em;">
+                            79.13
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-value">943</div>
+                            <div class="metric-label">単語数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">29</div>
+                            <div class="metric-label">見出し数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">11</div>
+                            <div class="metric-label">リンク数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">非常に読みやすい</div>
+                            <div class="metric-label">可読性</div>
+                        </div>
+                    </div>
+
+                    
+                </div>
+                
+                <div class="file-analysis">
+                    <div class="file-header">
+                        <div class="file-name">実装仕様書.md</div>
+                        <div class="score-circle score-fair" style="width: 60px; height: 60px; font-size: 1.2em;">
+                            78.16
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-value">2149</div>
+                            <div class="metric-label">単語数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">24</div>
+                            <div class="metric-label">見出し数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">0</div>
+                            <div class="metric-label">リンク数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">非常に読みやすい</div>
+                            <div class="metric-label">可読性</div>
+                        </div>
+                    </div>
+
+                    
+                </div>
+                
+                <div class="file-analysis">
+                    <div class="file-header">
+                        <div class="file-name">レスポンシブコンポーネント詳細設計書.md</div>
+                        <div class="score-circle score-fair" style="width: 60px; height: 60px; font-size: 1.2em;">
+                            77.59
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-value">1199</div>
+                            <div class="metric-label">単語数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">37</div>
+                            <div class="metric-label">見出し数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">1</div>
+                            <div class="metric-label">リンク数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">非常に読みやすい</div>
+                            <div class="metric-label">可読性</div>
+                        </div>
+                    </div>
+
+                    
+                </div>
+                
+                <div class="file-analysis">
+                    <div class="file-header">
+                        <div class="file-name">設計書レビュー・連携チェック報告書.md</div>
+                        <div class="score-circle score-fair" style="width: 60px; height: 60px; font-size: 1.2em;">
+                            77.53
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-value">1018</div>
+                            <div class="metric-label">単語数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">56</div>
+                            <div class="metric-label">見出し数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">0</div>
+                            <div class="metric-label">リンク数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">非常に読みやすい</div>
+                            <div class="metric-label">可読性</div>
+                        </div>
+                    </div>
+
+                    
+                </div>
+                
+                <div class="file-analysis">
+                    <div class="file-header">
+                        <div class="file-name">01-システム概要.md</div>
+                        <div class="score-circle score-fair" style="width: 60px; height: 60px; font-size: 1.2em;">
+                            77.26
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-value">507</div>
+                            <div class="metric-label">単語数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">35</div>
+                            <div class="metric-label">見出し数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">15</div>
+                            <div class="metric-label">リンク数</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">非常に読みやすい</div>
+                            <div class="metric-label">可読性</div>
+                        </div>
+                    </div>
+
+                    
+                </div>
+                
+    </div>
+</body>
+</html>
+        
