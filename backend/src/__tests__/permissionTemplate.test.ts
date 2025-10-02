@@ -39,7 +39,7 @@ describe('Permission Template API', () => {
         role: 'ADMIN',
         companyId: testCompanyId
       },
-      process.env.JWT_SECRET || 'test-secret',
+      process.env.JWT_ACCESS_SECRET || 'test-access-secret',
       { expiresIn: '1h' }
     );
 

@@ -73,7 +73,7 @@ describe('JWT Authentication Error Handling', () => {
     test('TOKEN_EXPIRED: 期限切れトークン', async () => {
       const expiredToken = jwt.sign(
         { userId: 1, username: 'test' },
-        process.env.JWT_SECRET || 'development-secret-key',
+        process.env.JWT_ACCESS_SECRET || 'development-access-secret',
         { expiresIn: '-1h' } // 1時間前に期限切れ
       );
 
@@ -89,7 +89,7 @@ describe('JWT Authentication Error Handling', () => {
     test('TOKEN_PAYLOAD_INVALID: ペイロード不完全（userIdなし）', async () => {
       const incompleteToken = jwt.sign(
         { username: 'test' }, // userIdがない
-        process.env.JWT_SECRET || 'development-secret-key',
+        process.env.JWT_ACCESS_SECRET || 'development-access-secret',
         { expiresIn: '1h' }
       );
 
@@ -105,7 +105,7 @@ describe('JWT Authentication Error Handling', () => {
     test('TOKEN_PAYLOAD_INVALID: ペイロード不完全（usernameなし）', async () => {
       const incompleteToken = jwt.sign(
         { userId: 1 }, // usernameがない
-        process.env.JWT_SECRET || 'development-secret-key',
+        process.env.JWT_ACCESS_SECRET || 'development-access-secret',
         { expiresIn: '1h' }
       );
 
@@ -144,7 +144,7 @@ describe('JWT Authentication Error Handling', () => {
     test('SESSION_NOT_FOUND: 存在しないセッション', async () => {
       const nonExistentToken = jwt.sign(
         { userId: 1, username: 'test' },
-        process.env.JWT_SECRET || 'development-secret-key',
+        process.env.JWT_ACCESS_SECRET || 'development-access-secret',
         { expiresIn: '1h' }
       );
 

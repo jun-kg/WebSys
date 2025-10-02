@@ -63,7 +63,7 @@ export class WebSocketService {
         // JWT検証
         let decoded: any
         try {
-          decoded = jwt.verify(token, process.env.JWT_SECRET || 'development-secret-key')
+          decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET || 'development-access-secret')
         } catch (jwtError) {
           let errorMessage: string
           let errorCode: string
