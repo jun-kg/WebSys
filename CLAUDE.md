@@ -77,6 +77,103 @@ TypeError: Cannot read properties of undefined (reading 'findMany')
 
 ---
 
+## 🗄️ データベーススキーマ分離ガイドライン
+
+### 基本方針
+Prismaは単一`schema.prisma`ファイルを使用しますが、**コメントブロックによる論理的分離**を採用します。
+これは業界標準のプラクティスで、管理性と明確性を両立します。
+
+### スキーマ構造
+
+```prisma
+// ============================================
+// 🔒 CORE MODELS (共通コア - 変更禁止)
+// ============================================
+// システム基盤モデル。全プロジェクトで共有。
+
+// --- Authentication & Authorization ---
+model users { ... }
+model companies { ... }
+model departments { ... }
+
+// --- Audit & Logging ---
+model audit_logs { ... }
+model logs { ... }
+
+// ============================================
+// 🔌 EXTENSION MODELS (拡張可能)
+// ============================================
+// 企業がカスタマイズ可能なモデル。
+
+// model ext_user_profiles { ... }
+
+// ============================================
+// 🏢 CUSTOM MODELS (企業固有)
+// ============================================
+// 完全に企業独自のモデル。
+
+// --- Workflow Management ---
+model workflow_types { ... }
+model workflow_requests { ... }
+```
+
+### モデル分類ルール
+
+#### 🔒 共通コアモデル（CORE MODELS）
+**対象テーブル**:
+- 認証・権限: users, companies, departments, user_departments, user_sessions
+- 権限管理: features, department_permissions, permission_templates, permission_template_features, permission_inheritance_rules
+- 監査: audit_logs
+- ログ監視: logs, log_statistics, alert_rules
+- 通知: notifications
+
+**ルール**:
+- ❌ 既存カラムの削除・型変更禁止
+- ❌ リレーションの削除禁止
+- ✅ 新規カラム追加は可能（オプショナル）
+- ✅ 新規インデックス追加は可能
+
+#### 🔌 拡張可能モデル（EXTENSION MODELS）
+**推奨プレフィックス**: `ext_` （任意）
+
+**ルール**:
+- ✅ 新規モデル追加自由
+- ✅ カラム追加自由
+- ✅ 共通コアモデルへのリレーション追加可能
+- ❌ 共通コアモデルの既存カラム変更禁止
+
+#### 🏢 企業固有モデル（CUSTOM MODELS）
+**ルール**:
+- ✅ 完全に自由
+- ✅ モデル追加・削除・変更すべて可能
+
+### マイグレーション管理
+
+**共通コアモデル変更時**:
+```bash
+# templates ディレクトリで実施
+cd websys/backend
+npx prisma migrate dev --name core_update_users
+```
+
+**企業固有モデル変更時**:
+```bash
+# プロジェクトディレクトリで実施
+cd workspace/backend
+npx prisma migrate dev --name custom_add_feature
+```
+
+### 互換性確認チェックリスト
+
+共通ライブラリ更新時は以下を確認:
+- [ ] 既存カラムの型が変更されていないか
+- [ ] 既存リレーションが削除されていないか
+- [ ] NOT NULL制約が追加されていないか
+- [ ] ユニーク制約が追加されていないか
+- [ ] デフォルト値が変更されていないか
+
+---
+
 ## プロジェクト概要
 
 Vue.js 3 + Element Plus + Express + PostgreSQLを使用した**共通ライブラリ型社内システム開発環境**です。
