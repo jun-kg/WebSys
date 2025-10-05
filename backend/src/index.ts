@@ -3,26 +3,28 @@ import cors from 'cors'
 import morgan from 'morgan'
 import dotenv from 'dotenv'
 import { createServer } from 'http'
-import { applySecurity } from './middleware/security'
-import authRoutes from './routes/auth'
-import userRoutes from './routes/users'
-import companyRoutes from './routes/companies'
-import departmentRoutes from './routes/departments'
-import featureRoutes from './routes/features'
-import permissionRoutes from './routes/permissions/index'
-import logRoutes from './routes/logs'
-import alertRuleRoutes from './routes/alertRules'
-import notificationRoutes from './routes/notifications'
-import statisticsRoutes from './routes/statistics'
-import permissionInheritanceRoutes from './routes/permissionInheritance'
-import reportRoutes from './routes/reports'
-import healthRoutes from './routes/health'
-import workflowRoutes from './routes/workflow/index'
-import approvalRoutes from './routes/approval.js'
-import departmentTemplateRoutes from './custom/routes/department-templates'
-import { errorHandler } from './middleware/errorHandler.js'
-import { initializeWebSocketService } from './services/WebSocketService.js'
-import { SystemHealthService } from './services/SystemHealthService.js'
+import { applySecurity } from '@core/middleware/security'
+import authRoutes from '@core/routes/auth'
+import userRoutes from '@custom/routes/users'
+import companyRoutes from '@custom/routes/companies'
+import departmentRoutes from '@custom/routes/departments'
+import featureRoutes from '@custom/routes/features'
+import permissionRoutes from '@core/routes/permissions/index'
+import logRoutes from '@core/routes/logs'
+import alertRuleRoutes from '@core/routes/alertRules'
+import notificationRoutes from '@core/routes/notifications'
+import statisticsRoutes from '@custom/routes/statistics'
+import permissionInheritanceRoutes from '@custom/routes/permissionInheritance'
+import reportRoutes from '@custom/routes/reports'
+import healthRoutes from '@custom/routes/health'
+import workflowRoutes from '@custom/routes/workflow/index'
+import approvalRoutes from '@custom/routes/approval.js'
+import departmentTemplateRoutes from '@custom/routes/department-templates'
+import rolePermissionRoutes from '@custom/routes/role-permissions'
+import guestUserRoutes from '@custom/routes/guest-users'
+import { errorHandler } from '@core/middleware/errorHandler.js'
+import { initializeWebSocketService } from '@core/services/WebSocketService.js'
+import { SystemHealthService } from '@custom/services/SystemHealthService.js'
 
 dotenv.config()
 
@@ -74,6 +76,8 @@ app.use('/api/reports', reportRoutes)
 app.use('/api/workflow', workflowRoutes)
 app.use('/api/approval', approvalRoutes)
 app.use('/api/department-templates', departmentTemplateRoutes)
+app.use('/api/role-permissions', rolePermissionRoutes)
+app.use('/api/guest', guestUserRoutes)
 app.use('/api', healthRoutes)
 
 // WebSocket接続状況API
