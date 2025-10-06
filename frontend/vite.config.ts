@@ -20,7 +20,10 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
+      '@': path.resolve(__dirname, './src'),
+      '@core': path.resolve(__dirname, './src/core'),
+      '@extensions': path.resolve(__dirname, './src/extensions'),
+      '@custom': path.resolve(__dirname, './src/custom')
     }
   },
   build: {
@@ -169,8 +172,10 @@ export default defineConfig({
     port: 3000,
     fs: {
       allow: [
-        "/app",
-        // フォントファイルアクセス許可（拡張）
+        // Dockerコンテナ内のアプリケーションディレクトリ
+        '/app',
+        '/app/node_modules',
+        // ホスト環境のパス（開発環境用）
         '/home/typho/src/elementplus/websys/workspace',
         '/home/typho/src/elementplus/websys/node_modules',
         '/home/typho/src/elementplus/websys/node_modules/@fontsource',
@@ -182,7 +187,8 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://websys_backend_dev:8000',
+        // Docker環境ではコンテナ名を使用、ローカル環境ではlocalhost
+        target: process.env.VITE_API_PROXY_TARGET || 'http://websys_backend_dev:8000',
         changeOrigin: true,
         secure: false,
         timeout: 10000,
