@@ -1,22 +1,13 @@
 <template>
   <div class="permission-template">
-    <!-- ページヘッダー -->
-    <el-card class="page-header">
-      <el-row align="middle" justify="space-between">
-        <el-col :span="16">
-          <h1 class="page-title">権限テンプレート管理</h1>
-          <p class="page-description">
-            権限テンプレートの作成・管理ができます。テンプレートを部署に適用して権限を一括設定できます。
-          </p>
-        </el-col>
-        <el-col :span="8" class="text-right">
-          <el-button type="primary" @click="showCreateDialog">
-            <el-icon><Plus /></el-icon>
-            新規テンプレート作成
-          </el-button>
-        </el-col>
-      </el-row>
-    </el-card>
+    <PageHeader title="権限テンプレート管理" icon="Setting">
+      <template #actions>
+        <el-button type="primary" @click="showCreateDialog">
+          <el-icon><Plus /></el-icon>
+          新規テンプレート作成
+        </el-button>
+      </template>
+    </PageHeader>
 
     <!-- テンプレート一覧 -->
     <el-card class="template-list">

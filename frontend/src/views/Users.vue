@@ -1,13 +1,22 @@
 <template>
   <div class="users-page">
+    <!-- 統一ページヘッダー -->
+    <PageHeader
+      title="ユーザー管理"
+      :breadcrumbs="breadcrumbs"
+    >
+      <template #actions>
+        <el-button type="primary" @click="handleAdd">
+          <el-icon><Plus /></el-icon>
+          新規追加
+        </el-button>
+      </template>
+    </PageHeader>
+
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>ユーザー管理</span>
-          <el-button type="primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>
-            新規追加
-          </el-button>
+          <span>ユーザー一覧</span>
         </div>
       </template>
 
@@ -187,7 +196,12 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { Plus, Search, Refresh, Edit, Delete } from '@element-plus/icons-vue'
 import { usersApi, type User } from '@/api/users'
 import type { CompanyDepartmentData } from '@/types/user'
+import PageHeader from '@/components/navigation/PageHeader.vue'
+import { useNavigation } from '@/composables/useNavigation'
 // import { CommonButton, CommonCard, CommonTable, CommonTag, CommonTableColumn, CommonForm, CommonFormItem, CommonInput, CommonSelect, CommonOption, CommonSwitch } from '@company/shared-components'
+
+// ナビゲーション
+const { breadcrumbs } = useNavigation()
 
 const loading = ref(false)
 const currentPage = ref(1)

@@ -1,27 +1,13 @@
 <template>
   <div class="feature-management">
-    <!-- ページヘッダー -->
-    <el-card class="page-header">
-      <el-row align="middle" justify="space-between">
-        <el-col :span="16">
-          <h1 class="page-title">機能管理</h1>
-          <p class="page-description">
-            システム機能の登録・編集・削除と権限設定
-          </p>
-        </el-col>
-        <el-col :span="8" class="text-right">
-          <el-button
-            type="primary"
-            @click="showCreateDialog = true"
-          >
-            <template #icon>
-              <Plus />
-            </template>
-            新規機能追加
-          </el-button>
-        </el-col>
-      </el-row>
-    </el-card>
+    <PageHeader title="機能管理" icon="Grid">
+      <template #actions>
+        <el-button type="primary" @click="showCreateDialog = true">
+          <el-icon><Plus /></el-icon>
+          新規機能追加
+        </el-button>
+      </template>
+    </PageHeader>
 
     <!-- 検索・フィルター -->
     <el-card class="filter-section">
@@ -272,6 +258,7 @@ import { ElMessage, ElMessageBox, ElDialog, ElPagination } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 // Element Plus components are auto-imported
 import { featureAPI } from '@/api/features'
+import PageHeader from '@/components/navigation/PageHeader.vue'
 
 // リアクティブデータ
 const loading = ref(false)

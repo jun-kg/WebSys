@@ -179,164 +179,223 @@
           />
         </el-form-item>
 
-        <!-- 承認ステップ設定 -->
+        <!-- テンプレート選択 -->
+        <el-form-item label="テンプレート">
+          <div class="template-section">
+            <el-select
+              v-model="selectedTemplate"
+              placeholder="テンプレートを選択して適用"
+              style="width: 300px"
+              @change="applyTemplate"
+              clearable
+            >
+              <el-option
+                v-for="template in routeTemplates"
+                :key="template.id"
+                :label="template.name"
+                :value="template.id"
+              >
+                <div class="template-option">
+                  <span class="template-name">{{ template.name }}</span>
+                  <span class="template-desc">{{ template.description }}</span>
+                </div>
+              </el-option>
+            </el-select>
+            <el-text type="info" size="small" style="margin-left: 10px">
+              テンプレートを選択すると、事前定義された承認フローが適用されます
+            </el-text>
+          </div>
+        </el-form-item>
+
+        <!-- 承認ステップ設定 - ビジュアルエディタ -->
         <div class="steps-section">
           <div class="steps-header">
-            <h3>承認ステップ設定</h3>
-            <el-button type="primary" @click="addStep">ステップ追加</el-button>
+            <h3>承認フロー設計</h3>
+            <div class="header-actions-group">
+              <el-button-group>
+                <el-button :type="viewMode === 'visual' ? 'primary' : ''" @click="viewMode = 'visual'">
+                  <el-icon><View /></el-icon>
+                  ビジュアル
+                </el-button>
+                <el-button :type="viewMode === 'list' ? 'primary' : ''" @click="viewMode = 'list'">
+                  <el-icon><List /></el-icon>
+                  リスト
+                </el-button>
+              </el-button-group>
+              <el-button type="primary" @click="addStep">
+                <el-icon><Plus /></el-icon>
+                ステップ追加
+              </el-button>
+            </div>
           </div>
 
-          <div v-if="routeForm.steps.length === 0" class="empty-steps">
-            <el-empty description="承認ステップが設定されていません" />
+          <!-- ビジュアルモード -->
+          <div v-if="viewMode === 'visual'" class="visual-mode">
+            <ApprovalFlowDiagram
+              :steps="routeForm.steps"
+              :users="users"
+              :departments="departments"
+              @step-add="handleStepAdd"
+              @step-edit="handleStepEdit"
+              @step-delete="handleStepDelete"
+              @step-click="handleStepClick"
+            />
           </div>
 
-          <div v-else class="steps-container">
-            <div
-              v-for="(step, index) in routeForm.steps"
-              :key="index"
-              class="step-item"
-            >
-              <div class="step-header">
-                <div class="step-number">ステップ {{ index + 1 }}</div>
-                <div class="step-actions">
-                  <el-button
-                    size="small"
-                    @click="moveStepUp(index)"
-                    :disabled="index === 0"
-                  >
-                    <el-icon><ArrowUp /></el-icon>
-                  </el-button>
-                  <el-button
-                    size="small"
-                    @click="moveStepDown(index)"
-                    :disabled="index === routeForm.steps.length - 1"
-                  >
-                    <el-icon><ArrowDown /></el-icon>
-                  </el-button>
-                  <el-button
-                    size="small"
-                    type="danger"
-                    @click="removeStep(index)"
-                  >
-                    <el-icon><Delete /></el-icon>
-                  </el-button>
+          <!-- リストモード -->
+          <div v-else class="list-mode">
+            <div v-if="routeForm.steps.length === 0" class="empty-steps">
+              <el-empty description="承認ステップが設定されていません" />
+            </div>
+
+            <div v-else class="steps-container">
+              <div
+                v-for="(step, index) in routeForm.steps"
+                :key="index"
+                class="step-item"
+              >
+                <div class="step-header">
+                  <div class="step-number">ステップ {{ index + 1 }}</div>
+                  <div class="step-actions">
+                    <el-button
+                      size="small"
+                      @click="moveStepUp(index)"
+                      :disabled="index === 0"
+                    >
+                      <el-icon><ArrowUp /></el-icon>
+                    </el-button>
+                    <el-button
+                      size="small"
+                      @click="moveStepDown(index)"
+                      :disabled="index === routeForm.steps.length - 1"
+                    >
+                      <el-icon><ArrowDown /></el-icon>
+                    </el-button>
+                    <el-button
+                      size="small"
+                      type="danger"
+                      @click="removeStep(index)"
+                    >
+                      <el-icon><Delete /></el-icon>
+                    </el-button>
+                  </div>
                 </div>
+
+                <el-row :gutter="15">
+                  <el-col :span="8">
+                    <el-form-item label="ステップ名" :prop="`steps.${index}.stepName`">
+                      <el-input
+                        v-model="step.stepName"
+                        placeholder="例: 部門長承認"
+                      />
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="8">
+                    <el-form-item label="承認者タイプ" :prop="`steps.${index}.approverType`">
+                      <el-select
+                        v-model="step.approverType"
+                        placeholder="選択してください"
+                        @change="onApproverTypeChange(step, index)"
+                      >
+                        <el-option label="特定ユーザー" value="USER" />
+                        <el-option label="部署" value="DEPARTMENT" />
+                        <el-option label="役割" value="ROLE" />
+                        <el-option label="動的" value="DYNAMIC" />
+                      </el-select>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="8">
+                    <el-form-item label="承認者" :prop="`steps.${index}.approverValue`">
+                      <!-- ユーザー選択 -->
+                      <el-select
+                        v-if="step.approverType === 'USER'"
+                        v-model="step.approverValue"
+                        placeholder="ユーザーを選択"
+                        filterable
+                      >
+                        <el-option
+                          v-for="user in users"
+                          :key="user.id"
+                          :label="user.name"
+                          :value="user.id.toString()"
+                        />
+                      </el-select>
+
+                      <!-- 部署選択 -->
+                      <el-select
+                        v-else-if="step.approverType === 'DEPARTMENT'"
+                        v-model="step.approverValue"
+                        placeholder="部署を選択"
+                      >
+                        <el-option
+                          v-for="dept in departments"
+                          :key="dept.id"
+                          :label="dept.name"
+                          :value="dept.id.toString()"
+                        />
+                      </el-select>
+
+                      <!-- 役割選択 -->
+                      <el-select
+                        v-else-if="step.approverType === 'ROLE'"
+                        v-model="step.approverValue"
+                        placeholder="役割を選択"
+                      >
+                        <el-option label="管理者" value="ADMIN" />
+                        <el-option label="マネージャー" value="MANAGER" />
+                        <el-option label="一般ユーザー" value="USER" />
+                      </el-select>
+
+                      <!-- 動的条件 -->
+                      <el-input
+                        v-else-if="step.approverType === 'DYNAMIC'"
+                        v-model="step.approverValue"
+                        placeholder="例: 申請者の直属上司"
+                      />
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+
+                <el-row :gutter="15">
+                  <el-col :span="6">
+                    <el-form-item label="必須承認">
+                      <el-switch v-model="step.isRequired" />
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="6">
+                    <el-form-item label="並列承認">
+                      <el-switch v-model="step.isParallel" />
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="6">
+                    <el-form-item label="承認制限時間">
+                      <el-input-number
+                        v-model="step.timeoutHours"
+                        :min="1"
+                        :max="8760"
+                        placeholder="時間"
+                      />
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="6">
+                    <el-form-item label="ステップ番号">
+                      <el-input-number
+                        v-model="step.stepNumber"
+                        :min="1"
+                        :max="999"
+                        :disabled="true"
+                      />
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+
+                <el-form-item label="自動承認条件">
+                  <el-input
+                    v-model="step.autoApprovalCondition"
+                    placeholder="例: amount < 10000"
+                  />
+                </el-form-item>
               </div>
-
-              <el-row :gutter="15">
-                <el-col :span="8">
-                  <el-form-item label="ステップ名" :prop="`steps.${index}.stepName`">
-                    <el-input
-                      v-model="step.stepName"
-                      placeholder="例: 部門長承認"
-                    />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="8">
-                  <el-form-item label="承認者タイプ" :prop="`steps.${index}.approverType`">
-                    <el-select
-                      v-model="step.approverType"
-                      placeholder="選択してください"
-                      @change="onApproverTypeChange(step, index)"
-                    >
-                      <el-option label="特定ユーザー" value="USER" />
-                      <el-option label="部署" value="DEPARTMENT" />
-                      <el-option label="役割" value="ROLE" />
-                      <el-option label="動的" value="DYNAMIC" />
-                    </el-select>
-                  </el-form-item>
-                </el-col>
-                <el-col :span="8">
-                  <el-form-item label="承認者" :prop="`steps.${index}.approverValue`">
-                    <!-- ユーザー選択 -->
-                    <el-select
-                      v-if="step.approverType === 'USER'"
-                      v-model="step.approverValue"
-                      placeholder="ユーザーを選択"
-                      filterable
-                    >
-                      <el-option
-                        v-for="user in users"
-                        :key="user.id"
-                        :label="user.name"
-                        :value="user.id.toString()"
-                      />
-                    </el-select>
-
-                    <!-- 部署選択 -->
-                    <el-select
-                      v-else-if="step.approverType === 'DEPARTMENT'"
-                      v-model="step.approverValue"
-                      placeholder="部署を選択"
-                    >
-                      <el-option
-                        v-for="dept in departments"
-                        :key="dept.id"
-                        :label="dept.name"
-                        :value="dept.id.toString()"
-                      />
-                    </el-select>
-
-                    <!-- 役割選択 -->
-                    <el-select
-                      v-else-if="step.approverType === 'ROLE'"
-                      v-model="step.approverValue"
-                      placeholder="役割を選択"
-                    >
-                      <el-option label="管理者" value="ADMIN" />
-                      <el-option label="マネージャー" value="MANAGER" />
-                      <el-option label="一般ユーザー" value="USER" />
-                    </el-select>
-
-                    <!-- 動的条件 -->
-                    <el-input
-                      v-else-if="step.approverType === 'DYNAMIC'"
-                      v-model="step.approverValue"
-                      placeholder="例: 申請者の直属上司"
-                    />
-                  </el-form-item>
-                </el-col>
-              </el-row>
-
-              <el-row :gutter="15">
-                <el-col :span="6">
-                  <el-form-item label="必須承認">
-                    <el-switch v-model="step.isRequired" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="6">
-                  <el-form-item label="並列承認">
-                    <el-switch v-model="step.isParallel" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="6">
-                  <el-form-item label="承認制限時間">
-                    <el-input-number
-                      v-model="step.timeoutHours"
-                      :min="1"
-                      :max="8760"
-                      placeholder="時間"
-                    />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="6">
-                  <el-form-item label="ステップ番号">
-                    <el-input-number
-                      v-model="step.stepNumber"
-                      :min="1"
-                      :max="999"
-                      :disabled="true"
-                    />
-                  </el-form-item>
-                </el-col>
-              </el-row>
-
-              <el-form-item label="自動承認条件">
-                <el-input
-                  v-model="step.autoApprovalCondition"
-                  placeholder="例: amount < 10000"
-                />
-              </el-form-item>
             </div>
           </div>
         </div>
@@ -410,9 +469,10 @@
 import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { Plus, ArrowUp, ArrowDown, Delete } from '@element-plus/icons-vue'
+import { Plus, ArrowUp, ArrowDown, Delete, View, List } from '@element-plus/icons-vue'
 import { hasPermission } from '@/utils/auth'
 import { formatDate, formatDateTime } from '@/utils/date'
+import ApprovalFlowDiagram from '@/components/workflow/ApprovalFlowDiagram.vue'
 
 // リアクティブデータ
 const loading = ref(false)
@@ -426,6 +486,207 @@ const showCreateDialog = ref(false)
 const showDetailDialog = ref(false)
 const editingItem = ref(null)
 const selectedItem = ref(null)
+const viewMode = ref<'visual' | 'list'>('visual')
+const selectedTemplate = ref(null)
+
+// 承認ルートテンプレート定義
+const routeTemplates = ref([
+  {
+    id: 'simple',
+    name: 'シンプル承認（1段階）',
+    description: '上長1名による承認',
+    steps: [
+      {
+        stepNumber: 1,
+        stepName: '上長承認',
+        approverType: 'ROLE',
+        approverValue: 'MANAGER',
+        isRequired: true,
+        isParallel: false,
+        isSequential: false,
+        timeoutHours: 24,
+        autoApprovalCondition: '',
+        minimumApprovals: 1,
+        canSkip: false
+      }
+    ]
+  },
+  {
+    id: 'two-stage',
+    name: '2段階承認',
+    description: '課長 → 部長の順次承認',
+    steps: [
+      {
+        stepNumber: 1,
+        stepName: '課長承認',
+        approverType: 'ROLE',
+        approverValue: 'MANAGER',
+        isRequired: true,
+        isParallel: false,
+        isSequential: true,
+        timeoutHours: 24,
+        autoApprovalCondition: '',
+        minimumApprovals: 1,
+        canSkip: false
+      },
+      {
+        stepNumber: 2,
+        stepName: '部長承認',
+        approverType: 'ROLE',
+        approverValue: 'ADMIN',
+        isRequired: true,
+        isParallel: false,
+        isSequential: true,
+        timeoutHours: 48,
+        autoApprovalCondition: '',
+        minimumApprovals: 1,
+        canSkip: false
+      }
+    ]
+  },
+  {
+    id: 'parallel',
+    name: '並列承認',
+    description: '複数の承認者が同時に承認（AND条件）',
+    steps: [
+      {
+        stepNumber: 1,
+        stepName: '並列承認（全員必須）',
+        approverType: 'DEPARTMENT',
+        approverValue: '',
+        isRequired: true,
+        isParallel: true,
+        isSequential: false,
+        parallelType: 'AND',
+        timeoutHours: 48,
+        autoApprovalCondition: '',
+        minimumApprovals: 1,
+        canSkip: false
+      }
+    ]
+  },
+  {
+    id: 'or-parallel',
+    name: 'OR並列承認',
+    description: '複数の承認者のうち1名が承認すればOK（OR条件）',
+    steps: [
+      {
+        stepNumber: 1,
+        stepName: '並列承認（1名以上）',
+        approverType: 'DEPARTMENT',
+        approverValue: '',
+        isRequired: true,
+        isParallel: true,
+        isSequential: false,
+        parallelType: 'OR',
+        timeoutHours: 48,
+        autoApprovalCondition: '',
+        minimumApprovals: 1,
+        canSkip: false
+      }
+    ]
+  },
+  {
+    id: 'three-stage',
+    name: '3段階承認',
+    description: '課長 → 部長 → 役員の順次承認',
+    steps: [
+      {
+        stepNumber: 1,
+        stepName: '課長承認',
+        approverType: 'ROLE',
+        approverValue: 'MANAGER',
+        isRequired: true,
+        isParallel: false,
+        isSequential: true,
+        timeoutHours: 24,
+        autoApprovalCondition: '',
+        minimumApprovals: 1,
+        canSkip: false
+      },
+      {
+        stepNumber: 2,
+        stepName: '部長承認',
+        approverType: 'ROLE',
+        approverValue: 'ADMIN',
+        isRequired: true,
+        isParallel: false,
+        isSequential: true,
+        timeoutHours: 48,
+        autoApprovalCondition: '',
+        minimumApprovals: 1,
+        canSkip: false
+      },
+      {
+        stepNumber: 3,
+        stepName: '役員承認',
+        approverType: 'ROLE',
+        approverValue: 'ADMIN',
+        isRequired: true,
+        isParallel: false,
+        isSequential: true,
+        timeoutHours: 72,
+        autoApprovalCondition: '',
+        minimumApprovals: 1,
+        canSkip: false
+      }
+    ]
+  },
+  {
+    id: 'conditional',
+    name: '条件付き承認',
+    description: '金額に応じて承認者が変わる',
+    steps: [
+      {
+        stepNumber: 1,
+        stepName: '少額: 課長承認',
+        approverType: 'ROLE',
+        approverValue: 'MANAGER',
+        isRequired: true,
+        isParallel: false,
+        isSequential: false,
+        timeoutHours: 24,
+        autoApprovalCondition: 'amount < 100000',
+        minimumApprovals: 1,
+        canSkip: false
+      },
+      {
+        stepNumber: 2,
+        stepName: '高額: 部長承認',
+        approverType: 'ROLE',
+        approverValue: 'ADMIN',
+        isRequired: true,
+        isParallel: false,
+        isSequential: true,
+        timeoutHours: 48,
+        autoApprovalCondition: 'amount >= 100000',
+        minimumApprovals: 1,
+        canSkip: false
+      }
+    ]
+  },
+  {
+    id: 'auto-approval',
+    name: '自動承認付き',
+    description: '一定時間経過で自動承認される',
+    steps: [
+      {
+        stepNumber: 1,
+        stepName: '上長承認（24時間後自動承認）',
+        approverType: 'ROLE',
+        approverValue: 'MANAGER',
+        isRequired: false,
+        isParallel: false,
+        isSequential: false,
+        timeoutHours: 24,
+        autoApprovalCondition: '',
+        autoApproveHours: 24,
+        minimumApprovals: 1,
+        canSkip: true
+      }
+    ]
+  }
+])
 
 const searchForm = reactive({
   search: '',
@@ -657,6 +918,59 @@ const onApproverTypeChange = (step: any, index: number) => {
   step.approverValue = ''
 }
 
+// ビジュアルダイアグラムからのイベントハンドラ
+const handleStepAdd = (stepData: any) => {
+  const newStep = {
+    stepNumber: routeForm.steps.length + 1,
+    stepName: stepData.stepName || `ステップ ${routeForm.steps.length + 1}`,
+    approverType: stepData.approverType || 'USER',
+    approverValue: stepData.approverValue || '',
+    isRequired: stepData.isRequired ?? true,
+    isParallel: stepData.isParallel ?? false,
+    isSequential: stepData.isSequential ?? false,
+    autoApprovalCondition: stepData.autoApprovalCondition || '',
+    timeoutHours: stepData.timeoutHours || 24,
+    minimumApprovals: stepData.minimumApprovals || 1,
+    canSkip: stepData.canSkip ?? false
+  }
+  routeForm.steps.push(newStep)
+  updateStepNumbers()
+  ElMessage.success('ステップを追加しました')
+}
+
+const handleStepEdit = (stepData: any) => {
+  const index = routeForm.steps.findIndex(s => s.stepNumber === stepData.stepNumber)
+  if (index !== -1) {
+    routeForm.steps[index] = { ...routeForm.steps[index], ...stepData }
+    ElMessage.success('ステップを更新しました')
+  }
+}
+
+const handleStepDelete = (step: any) => {
+  const index = routeForm.steps.findIndex(s => s.stepNumber === step.stepNumber)
+  if (index !== -1) {
+    removeStep(index)
+    ElMessage.success('ステップを削除しました')
+  }
+}
+
+const handleStepClick = (step: any) => {
+  // ステップクリック時の処理（詳細表示など）
+  console.log('Step clicked:', step)
+}
+
+// テンプレート適用
+const applyTemplate = () => {
+  if (!selectedTemplate.value) return
+
+  const template = routeTemplates.value.find(t => t.id === selectedTemplate.value)
+  if (template) {
+    routeForm.steps = JSON.parse(JSON.stringify(template.steps))
+    updateStepNumbers()
+    ElMessage.success(`テンプレート「${template.name}」を適用しました`)
+  }
+}
+
 const saveRoute = async () => {
   if (!routeFormRef.value) return
 
@@ -801,6 +1115,21 @@ onMounted(() => {
   color: #303133;
 }
 
+.header-actions-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.visual-mode {
+  min-height: 400px;
+  padding: 20px 0;
+}
+
+.list-mode {
+  min-height: 200px;
+}
+
 .empty-steps {
   text-align: center;
   padding: 40px 0;
@@ -932,5 +1261,27 @@ onMounted(() => {
 
 :deep(.el-form-item__label) {
   font-weight: 500;
+}
+
+.template-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.template-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.template-name {
+  font-weight: 500;
+  color: #303133;
+}
+
+.template-desc {
+  font-size: 12px;
+  color: #909399;
 }
 </style>

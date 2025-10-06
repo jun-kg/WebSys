@@ -4,8 +4,8 @@
  */
 
 import express from 'express';
-import { authMiddleware } from '../../middleware/auth';
-import { checkDepartmentScope } from '../../middleware/checkDepartmentScope';
+import { authMiddleware } from '@core/middleware/auth';
+import { checkDepartmentScope } from '@core/middleware/checkDepartmentScope';
 import { DepartmentTemplateService } from '../services/DepartmentTemplateService';
 
 const router = express.Router();

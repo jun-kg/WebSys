@@ -14,7 +14,10 @@
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@core/*": ["src/core/*"],
+      "@custom/*": ["src/custom/*"],
+      "@extensions/*": ["src/extensions/*"]
     }
   },
   "include": ["src/**/*.ts"],

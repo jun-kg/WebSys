@@ -1,13 +1,18 @@
 <template>
   <div class="departments-page">
+    <PageHeader title="部署管理" icon="Grid">
+      <template #actions>
+        <el-button type="primary" @click="handleAdd">
+          <el-icon><Plus /></el-icon>
+          新規追加
+        </el-button>
+      </template>
+    </PageHeader>
+
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>部署管理</span>
-          <el-button type="primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>
-            新規追加
-          </el-button>
+          <span>部署一覧</span>
         </div>
       </template>
 
@@ -150,6 +155,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { Plus, Search, Refresh, Edit, Delete } from '@element-plus/icons-vue'
 import { departmentAPI as departmentsApi, type Department } from '@/api/departments'
 import { companiesApi, type Company } from '@/api/companies'
+import PageHeader from '@/components/navigation/PageHeader.vue'
 
 const loading = ref(false)
 const currentPage = ref(1)

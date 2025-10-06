@@ -3,26 +3,30 @@ import cors from 'cors'
 import morgan from 'morgan'
 import dotenv from 'dotenv'
 import { createServer } from 'http'
-import { applySecurity } from './middleware/security'
-import authRoutes from './routes/auth'
-import userRoutes from './routes/users'
-import companyRoutes from './routes/companies'
-import departmentRoutes from './routes/departments'
-import featureRoutes from './routes/features'
-import permissionRoutes from './routes/permissions/index'
-import logRoutes from './routes/logs'
-import alertRuleRoutes from './routes/alertRules'
-import notificationRoutes from './routes/notifications'
-import statisticsRoutes from './routes/statistics'
-import permissionInheritanceRoutes from './routes/permissionInheritance'
-import reportRoutes from './routes/reports'
-import healthRoutes from './routes/health'
-import workflowRoutes from './routes/workflow/index'
-import approvalRoutes from './routes/approval.js'
+import { applySecurity } from './core/middleware/security'
+import { applyGuestConstraints } from './core/middleware/guestConstraint'
+import authRoutes from './core/routes/auth'
+import userRoutes from './custom/routes/users'
+import companyRoutes from './custom/routes/companies'
+import departmentRoutes from './custom/routes/departments'
+import featureRoutes from './custom/routes/features'
+import permissionRoutes from './core/routes/permissions/index'
+import logRoutes from './core/routes/logs'
+import alertRuleRoutes from './core/routes/alertRules'
+import notificationRoutes from './core/routes/notifications'
+import statisticsRoutes from './custom/routes/statistics'
+import permissionInheritanceRoutes from './custom/routes/permissionInheritance'
+import reportRoutes from './custom/routes/reports'
+import healthRoutes from './custom/routes/health'
+import workflowRoutes from './custom/routes/workflow/index'
+import approvalRoutes from './custom/routes/approval'
 import departmentTemplateRoutes from './custom/routes/department-templates'
-import { errorHandler } from './middleware/errorHandler.js'
-import { initializeWebSocketService } from './services/WebSocketService.js'
-import { SystemHealthService } from './services/SystemHealthService.js'
+import rolePermissionRoutes from './custom/routes/role-permissions'
+import guestUserRoutes from './custom/routes/guest-users'
+import bulkOperationsRoutes from './custom/routes/bulk-operations'
+import { errorHandler } from './core/middleware/errorHandler'
+import { initializeWebSocketService } from './core/services/WebSocketService'
+import { SystemHealthService } from './custom/services/SystemHealthService'
 
 dotenv.config()
 
@@ -47,6 +51,10 @@ applySecurity(app, {
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 app.use(morgan('combined')) // より詳細なログ出力
+
+// ゲスト制約ミドルウェア（/apiルートにのみ適用）
+// 認証が必要なルートで自動的にGUESTユーザーの制約をチェック
+app.use('/api', applyGuestConstraints)
 
 // Routes
 app.get('/health', (req, res) => {
@@ -74,6 +82,9 @@ app.use('/api/reports', reportRoutes)
 app.use('/api/workflow', workflowRoutes)
 app.use('/api/approval', approvalRoutes)
 app.use('/api/department-templates', departmentTemplateRoutes)
+app.use('/api/role-permissions', rolePermissionRoutes)
+app.use('/api/guest', guestUserRoutes)
+app.use('/api/bulk-operations', bulkOperationsRoutes)
 app.use('/api', healthRoutes)
 
 // WebSocket接続状況API
@@ -125,3 +136,4 @@ process.on('SIGINT', () => {
 
 // Export app for testing
 export { app }
+app.get("/api/test-guest", (req, res) => { res.json({ message: "Guest middleware check", user: req.user?.role }); });
