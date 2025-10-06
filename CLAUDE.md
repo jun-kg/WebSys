@@ -702,3 +702,527 @@ npm test -- src/views/__tests__/PermissionTemplate.test.ts  # 特定試験実行
 - **BUG #011 (CRITICAL)**: APIエンドポイント404エラー - 1時間以内修正完了
 - **影響範囲**: ログ監視システム全機能復旧
 - **修正効果**: 52件の潜在的問題を予防修正
+---
+
+## 🗄️ Prismaデータベース操作の絶対ルール（拡張）
+
+### 背景
+過去30件の不具合分析の結果、**Prismaモデル名エラーが全体の40%（12件）** を占めることが判明しました。
+単数形/複数形、camelCase/snake_caseの混在により、システム全体で66箇所の潜在的問題が発見されています。
+
+### ✅ 必須チェックリスト
+
+#### 1. モデル名の正確性
+
+**実装前に必ず `backend/prisma/schema.prisma` を確認してください。**
+
+```typescript
+// ❌ 絶対禁止: 単数形・typo・存在しないモデル名
+prisma.user.findMany()           // 誤: user
+prisma.log.findMany()            // 誤: log
+prisma.company.findMany()        // 誤: company
+prisma.feature.findMany()        // 誤: feature
+prisma.department.findMany()     // 誤: department
+prisma.userss.findMany()         // 誤: typo
+
+// ✅ 正しい: schema.prismaで定義された正確なモデル名
+prisma.users.findMany()          // 正: users（複数形）
+prisma.logs.findMany()           // 正: logs（複数形）
+prisma.companies.findMany()      // 正: companies（複数形）
+prisma.features.findMany()       // 正: features（複数形）
+prisma.departments.findMany()    // 正: departments（複数形）
+prisma.user_sessions.findMany()  // 正: user_sessions（snake_case）
+prisma.alert_rules.findMany()    // 正: alert_rules（snake_case）
+prisma.log_statistics.findMany() // 正: log_statistics（snake_case）
+prisma.audit_logs.findMany()     // 正: audit_logs（snake_case）
+```
+
+#### 2. リレーション名の正確性
+
+```typescript
+// ❌ 絶対禁止: 推測・省略形・単数形
+include: {
+  user: true,              // 誤: リレーション名は users
+  company: true,           // 誤: リレーション名は companies
+  primaryDepartment: true  // 誤: リレーション名は departments
+}
+
+// ✅ 正しい: schema.prismaで定義された正確なリレーション名
+include: {
+  users: true,       // 正: schema.prismaのリレーション名を使用
+  companies: true,   // 正: schema.prismaのリレーション名を使用
+  departments: true  // 正: schema.prismaのリレーション名を使用
+}
+```
+
+#### 3. 必須フィールドの確認
+
+```typescript
+// ❌ 絶対禁止: 必須フィールドの欠落
+await prisma.permission_templates.create({
+  data: {
+    name: "テンプレート",
+    companyId: 1
+    // updatedAt が欠落している場合エラーになる可能性
+  }
+})
+
+// ✅ 正しい: schema.prismaで@defaultがない必須フィールドは明示的に設定
+await prisma.permission_templates.create({
+  data: {
+    name: "テンプレート",
+    companyId: 1,
+    updatedAt: new Date()  // 必須フィールドを明示的に設定
+  }
+})
+```
+
+### 🔍 実装前の必須確認手順
+
+**ステップ1: schema.prismaを開く**
+```bash
+# backend/prisma/schema.prisma を必ず確認
+```
+
+**ステップ2: 使用するモデル定義を確認**
+```prisma
+model users {  // ← これが正確なモデル名
+  id           Int       @id @default(autoincrement())
+  username     String    @unique
+  companies    companies @relation(fields: [companyId], references: [id])  // ← リレーション名
+  // ...
+}
+```
+
+**ステップ3: コード内で正確に使用**
+```typescript
+// モデル名: users（複数形）
+const user = await prisma.users.findUnique({
+  where: { id: 1 },
+  include: {
+    companies: true  // リレーション名: companies
+  }
+})
+```
+
+### 🚨 典型的エラーパターンと対処法
+
+#### エラー1: "Cannot read properties of undefined (reading 'findMany')"
+```
+原因: モデル名が間違っている
+対処: schema.prismaで正確なモデル名を確認
+実例: prisma.user.findMany() → prisma.users.findMany()
+```
+
+#### エラー2: "Argument `updatedAt` is missing"
+```
+原因: 必須フィールドが欠落している
+対処: schema.prismaで必須フィールド(@defaultなし)を確認
+実例: data: { name, companyId, updatedAt: new Date() }
+```
+
+#### エラー3: "Unknown field 'user' for select statement"
+```
+原因: リレーション名が間違っている
+対処: schema.prismaで正確なリレーション名を確認
+実例: include: { user: true } → include: { users: true }
+```
+
+### 📝 水平展開チェック（必須実施）
+
+Prisma操作を1箇所修正した場合、以下のコマンドで全体をチェック：
+
+```bash
+# 水平展開チェックコマンド（コピペ可能）
+grep -r "prisma\.user\." backend/src/     # 単数形userの誤用チェック
+grep -r "prisma\.log\." backend/src/      # 単数形logの誤用チェック
+grep -r "prisma\.company\." backend/src/  # 単数形companyの誤用チェック
+grep -r "prisma\.feature\." backend/src/  # 単数形featureの誤用チェック
+```
+
+**水平展開チェックリスト**:
+- [ ] 同じモデルを使用する全ファイルをgrep検索
+- [ ] 単数形・複数形の統一性を確認
+- [ ] camelCaseとsnake_caseの混在をチェック
+- [ ] typo（userss等）の有無を確認
+- [ ] リレーション名の一致を確認
+
+**実績**: 水平展開チェックにより347%の予防効果（66件の潜在的問題を事前修正）
+
+---
+
+## 🔌 API実装の統一パターン
+
+### 背景
+APIエンドポイント問題が全体の23%（7件）を占め、ルーティング順序・環境変数対応の不備が主な原因です。
+
+### 1. バックエンドAPIルーティング順序の厳守
+
+**ルール**: 動的ルート（`:id`）は必ず静的ルートの後に配置
+
+```typescript
+// ❌ 絶対禁止: 動的ルートが先
+router.get('/logs/:id', getLogById)           // 先に動的ルート
+router.get('/logs/statistics', getStatistics) // 後に静的ルート
+// 結果: /logs/statistics が /logs/:id にマッチしてしまう（404エラー）
+
+// ✅ 正しい: 静的ルートを先に配置
+router.get('/logs/statistics', getStatistics) // 先に静的ルート
+router.get('/logs/realtime', getRealtime)     // 先に静的ルート
+router.get('/logs/search', searchLogs)        // 先に静的ルート
+router.get('/logs/:id', getLogById)           // 最後に動的ルート
+```
+
+**水平展開チェック**: 新規APIルート追加時は全ルートファイルで順序を確認
+```bash
+grep -A 5 "router\.get.*:id" backend/src/routes/*.ts
+```
+
+### 2. フロントエンドAPI基底URL設定
+
+**ルール**: 環境変数対応のプロキシ設定を必ず使用
+
+```typescript
+// ❌ 絶対禁止: ハードコードされた基底URL
+const API_BASE_URL = 'http://localhost:8000/api'
+
+// ✅ 正しい: 環境変数対応の設定
+// vite.config.ts
+export default defineConfig({
+  server: {
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_BASE_URL || 'http://backend:8000',
+        changeOrigin: true
+      }
+    }
+  }
+})
+
+// .env.local (ローカル環境)
+VITE_API_BASE_URL=http://localhost:8000
+
+// .env.docker (Docker環境)
+VITE_API_BASE_URL=http://backend:8000
+```
+
+### 3. API呼び出しの統一パターン
+
+```typescript
+// ✅ 正しい: 相対パスでAPI呼び出し（プロキシ経由）
+await fetch('/api/users', {
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  }
+})
+
+// ❌ 禁止: 絶対URLの直接指定（環境依存になる）
+await fetch('http://localhost:8000/api/users')
+```
+
+### 4. エラーハンドリングの統一
+
+```typescript
+// ✅ 必須パターン
+try {
+  const response = await fetch('/api/users')
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || `HTTP ${response.status}`)
+  }
+  const data = await response.json()
+  return data
+} catch (error) {
+  console.error('[API Error]', error)
+  ElMessage.error(error.message || 'システムエラーが発生しました')
+  throw error
+}
+```
+
+**水平展開チェック**:
+```bash
+grep -r "http://localhost" frontend/src/  # ハードコードチェック
+grep -r "http://backend" frontend/src/    # ハードコードチェック
+```
+
+---
+
+## 🎨 フロントエンド品質保証ガイドライン
+
+### 背景
+フロントエンド実装問題が全体の20%（6件）を占め、リアクティブデータ・モバイル対応の不備が主な原因です。
+
+### 1. Vueリアクティブデータの正しい使用
+
+```typescript
+// ❌ 絶対禁止: 非リアクティブデータの使用
+let count = 0  // 画面更新されない
+
+// ✅ 正しい: ref/reactiveの使用
+import { ref, reactive } from 'vue'
+const count = ref(0)
+const state = reactive({ count: 0 })
+```
+
+### 2. 条件分岐でのnull/undefinedチェック
+
+```vue
+<!-- ❌ 絶対禁止: チェックなしのプロパティアクセス -->
+<div>{{ user.name }}</div>
+
+<!-- ✅ 正しい: オプショナルチェーン使用 -->
+<div>{{ user?.name }}</div>
+
+<!-- ✅ 正しい: v-ifでのnullチェック -->
+<div v-if="user">{{ user.name }}</div>
+```
+
+### 3. レスポンシブ対応の必須実装
+
+```vue
+<template>
+  <!-- ✅ 必須: モバイル・デスクトップ両対応 -->
+  <el-row :gutter="isMobile ? 10 : 20">
+    <el-col :xs="24" :sm="12" :md="8">
+      <!-- コンテンツ -->
+    </el-col>
+  </el-row>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useWindowSize } from '@vueuse/core'
+
+const { width } = useWindowSize()
+const isMobile = computed(() => width.value < 768)
+</script>
+```
+
+### 4. ユーティリティファイルの必須配置
+
+**必須ファイル（欠落防止）**:
+- `src/utils/auth.ts` - 認証ヘルパー
+- `src/utils/date.ts` - 日付フォーマット
+- `src/utils/validation.ts` - バリデーション
+- `src/utils/format.ts` - データフォーマット
+
+```typescript
+// src/utils/auth.ts（必須）
+export const getAuthHeaders = () => {
+  const token = localStorage.getItem('token')
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  }
+}
+
+// src/utils/date.ts（必須）
+export const formatDate = (date: string | Date) => {
+  return new Date(date).toLocaleString('ja-JP')
+}
+```
+
+**水平展開チェック**:
+```bash
+ls -la frontend/src/utils/auth.ts        # 必須ファイル存在確認
+ls -la frontend/src/utils/date.ts        # 必須ファイル存在確認
+ls -la frontend/src/utils/validation.ts  # 必須ファイル存在確認
+```
+
+---
+
+## 🔒 認証・権限実装の絶対ルール
+
+### 背景
+認証・権限問題が全体の13%（4件）を占め、トークンリフレッシュ・複数タブ同期の不備がUX低下を招いています。
+
+### 1. トークンリフレッシュの必須実装
+
+```typescript
+// ✅ 必須: 401エラー時の自動トークンリフレッシュ
+async function apiCall(url: string, options: RequestInit) {
+  try {
+    let response = await fetch(url, options)
+
+    // 401エラー時: トークンリフレッシュを試行
+    if (response.status === 401) {
+      const refreshed = await refreshToken()
+      if (refreshed) {
+        // リトライ
+        response = await fetch(url, {
+          ...options,
+          headers: {
+            ...options.headers,
+            'Authorization': `Bearer ${getNewToken()}`
+          }
+        })
+      } else {
+        // リフレッシュ失敗: ログイン画面へ
+        router.push('/login')
+      }
+    }
+
+    return response
+  } catch (error) {
+    console.error('[API Error]', error)
+    throw error
+  }
+}
+```
+
+### 2. 複数タブ認証状態同期の必須実装
+
+```typescript
+// ✅ 必須: localStorage変更イベント監視
+// stores/auth.ts
+export const useAuthStore = defineStore('auth', () => {
+  const isAuthenticated = ref(false)
+
+  // 他タブでのログアウト検知
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'token' && !e.newValue) {
+      // トークン削除検知: 自動ログアウト
+      isAuthenticated.value = false
+      router.push('/login')
+    }
+  })
+
+  return { isAuthenticated }
+})
+```
+
+### 3. エラーメッセージの重複抑制
+
+```typescript
+// ✅ 必須: 同一メッセージの重複表示防止（3秒間）
+const lastErrorMessage = ref('')
+const lastErrorTime = ref(0)
+
+function showError(message: string) {
+  const now = Date.now()
+  if (message === lastErrorMessage.value && now - lastErrorTime.value < 3000) {
+    return // 3秒以内の同一メッセージは表示しない
+  }
+
+  lastErrorMessage.value = message
+  lastErrorTime.value = now
+  ElMessage.error(message)
+}
+```
+
+### 4. 権限チェックの3層防御（必須）
+
+```typescript
+// ✅ Layer 1: ルートガード（フロントエンド）
+router.beforeEach((to, from, next) => {
+  if (to.meta.requiresAuth && !isAuthenticated()) {
+    return next('/login')
+  }
+  next()
+})
+
+// ✅ Layer 2: バックエンドミドルウェア（サーバー側）
+router.get('/api/users', authenticate, authorize('ADMIN'), getUsers)
+
+// ✅ Layer 3: UIコンポーネント（表示制御）
+<el-button v-if="hasPermission('users', 'create')">
+  ユーザー追加
+</el-button>
+```
+
+---
+
+## 🔄 水平展開チェックの絶対実施
+
+### 背景
+水平展開チェックにより**347%の予防効果**（66件の潜在的問題を事前修正）を実現しています。
+
+### 必須実施タイミング
+
+1. **不具合修正完了時** - 必ず同様問題を全体検索
+2. **新機能実装時** - 既存の類似実装との整合性確認
+3. **コードレビュー時** - パターンの統一性確認
+
+### 水平展開チェックコマンド（必須実行）
+
+```bash
+# 1. Prismaモデル名チェック（最重要・40%のBUG原因）
+grep -r "prisma\.user\." backend/src/     # 単数形userの誤用
+grep -r "prisma\.log\." backend/src/      # 単数形logの誤用
+grep -r "prisma\.company\." backend/src/  # 単数形companyの誤用
+grep -r "prisma\.feature\." backend/src/  # 単数形featureの誤用
+
+# 2. CLAUDE.mdガイドライン違反チェック
+grep -r "new PrismaClient()" backend/src/ # 個別PrismaClient作成禁止
+
+# 3. APIルーティング順序チェック
+grep -A 5 "router\.get.*:id" backend/src/routes/*.ts
+
+# 4. 環境変数ハードコードチェック
+grep -r "http://localhost" frontend/src/
+grep -r "http://backend" frontend/src/
+
+# 5. ユーティリティファイル存在チェック
+ls -la frontend/src/utils/auth.ts
+ls -la frontend/src/utils/date.ts
+```
+
+### チェックリスト形式での記録（必須）
+
+```markdown
+## 水平展開チェック実施記録
+
+**対象BUG/機能**: BUG-XXX / T-XXX
+**実施日**: YYYY-MM-DD
+**実施者**:
+
+### チェック項目
+
+- [ ] 同じファイル内の類似コード確認
+- [ ] 同じディレクトリ内の類似ファイル確認
+- [ ] 同じPrismaモデルを使用する全ファイル確認
+- [ ] 同じAPIパターンを使用する全エンドポイント確認
+- [ ] 関連するフロントエンドコンポーネント確認
+- [ ] CLAUDE.mdガイドライン違反チェック
+- [ ] 環境変数ハードコードチェック
+
+### 発見・修正した問題
+
+| ファイル | 問題内容 | 修正内容 |
+|---------|---------|---------|
+|         |         |         |
+
+### 予防効果
+
+- 直接修正: X箇所
+- 水平展開で予防: Y箇所
+- 予防率: Z%
+```
+
+---
+
+## 📊 ガイドライン適用による期待効果
+
+### 定量的効果予測
+
+| 指標 | 現状 | 目標 | 改善率 |
+|------|------|------|--------|
+| Prismaエラー発生率 | 40% | 5%以下 | -87.5% |
+| APIエンドポイント問題 | 23% | 5%以下 | -78% |
+| フロントエンドバグ | 20% | 5%以下 | -75% |
+| 水平展開予防率 | 347% | 500%以上 | +44% |
+| 初回実装成功率 | 60% | 95%以上 | +58% |
+
+### 定性的効果
+
+- ✅ **開発速度向上**: チェックリストにより迷わず実装
+- ✅ **レビュー時間短縮**: パターン統一により確認容易
+- ✅ **新規メンバーオンボーディング**: 明確なガイドラインで学習容易
+- ✅ **本番環境トラブル削減**: 環境変数対応・エラー処理の徹底
+
+---
+
+**ガイドライン更新日**: 2025-10-06
+**元データ**: 不具合管理表30件・改善タスク23件の実績分析
+**水平展開実績**: 347%（66件の潜在的問題を予防）
