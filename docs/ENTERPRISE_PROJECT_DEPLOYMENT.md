@@ -424,27 +424,76 @@ cd /path/to/websys/workspace
 # backend/src/core または frontend/src/core で開発
 ```
 
-### 2. テンプレート生成
+### 2. 開発完了後、リリース作成
+
+#### 方法1: リリーススクリプト使用（推奨）
+
+```bash
+cd /path/to/websys
+./scripts/release.sh 1.0.0 stable
+```
+
+**スクリプトの機能:**
+- ✅ バージョンバリデーション
+- ✅ テンプレート自動生成
+- ✅ RELEASE.md自動更新
+- ✅ Gitタグ自動作成
+- ✅ リリースノート表示
+
+**ステータス:**
+- `stable` - 安定版（本番環境推奨）
+- `rc.1` - リリース候補（テスト環境推奨）
+- `beta.1` - ベータ版（開発環境のみ）
+- `alpha.1` - アルファ版（内部開発のみ）
+
+**出力例:**
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓ リリース作成完了: v1.0.0-stable
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 リリース情報:
+   バージョン: v1.0.0-stable
+   ステータス: 🟢 STABLE
+   Gitタグ: v1.0.0-stable
+   リリース日: 2025-10-18
+```
+
+#### 方法2: 手動リリース（上級者向け）
 
 ```bash
 cd /path/to/websys
 ./scripts/build-templates.sh
-```
-
-### 3. テンプレートコミット＆リリース
-
-```bash
 git add templates/
 git commit -m "feat(core): add new export feature"
-git tag v2025.11.01
+git tag v1.0.0-stable
 git push origin main --tags
 ```
+
+### 3. リリース確認
+
+リリースが完了したら、企業プロジェクトで使用可能かを確認します。
+
+```bash
+# RELEASE.mdでステータス確認
+cat /path/to/websys/RELEASE.md
+```
+
+**ステータスの意味:**
+- 🟢 **STABLE**: 本番環境での使用を推奨
+- 🟡 **RC**: テスト環境での検証を推奨
+- 🔴 **DEVELOPMENT**: 本番環境使用禁止
 
 ### 4. 企業プロジェクトへ適用
 
 #### 方法1: 自動更新スクリプト使用（推奨）
 
 ```bash
+# 安定版タグにチェックアウト
+cd /path/to/websys
+git checkout v1.0.0-stable
+
+# 企業プロジェクトに適用
 cd /path/to/company-a-project
 /path/to/websys/scripts/update-core.sh
 ```
