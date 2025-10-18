@@ -1,0 +1,75 @@
+{
+  "env": {
+    "node": true,
+    "es2021": true
+  },
+  "extends": [
+    "eslint:recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "MemberExpression[object.name='prisma'][property.name='user']",
+        "message": "❌ Prismaモデル名は複数形を使用してください: prisma.users"
+      },
+      {
+        "selector": "MemberExpression[object.name='prisma'][property.name='company']",
+        "message": "❌ Prismaモデル名は複数形を使用してください: prisma.companies"
+      },
+      {
+        "selector": "MemberExpression[object.name='prisma'][property.name='department']",
+        "message": "❌ Prismaモデル名は複数形を使用してください: prisma.departments"
+      },
+      {
+        "selector": "MemberExpression[object.name='prisma'][property.name='log']",
+        "message": "❌ Prismaモデル名は複数形を使用してください: prisma.logs"
+      },
+      {
+        "selector": "MemberExpression[object.name='prisma'][property.name='feature']",
+        "message": "❌ Prismaモデル名は複数形を使用してください: prisma.features"
+      },
+      {
+        "selector": "MemberExpression[object.name='prisma'][property.name='notification']",
+        "message": "❌ Prismaモデル名は複数形を使用してください: prisma.notifications"
+      },
+      {
+        "selector": "MemberExpression[object.name='prisma'][property.name='alertRule']",
+        "message": "❌ Prismaモデル名はスネークケースを使用してください: prisma.alert_rules"
+      },
+      {
+        "selector": "MemberExpression[object.name='prisma'][property.name='logStatistics']",
+        "message": "❌ Prismaモデル名はスネークケースを使用してください: prisma.log_statistics"
+      },
+      {
+        "selector": "MemberExpression[object.name='prisma'][property.name='auditLog']",
+        "message": "❌ Prismaモデル名はスネークケースを使用してください: prisma.audit_logs"
+      },
+      {
+        "selector": "MemberExpression[object.name='prisma'][property.name='userSession']",
+        "message": "❌ Prismaモデル名はスネークケースを使用してください: prisma.user_sessions"
+      },
+      {
+        "selector": "MemberExpression[object.name='prisma'][property.name='refreshToken']",
+        "message": "❌ Prismaモデル名はスネークケースを使用してください: prisma.refresh_tokens"
+      },
+      {
+        "selector": "MemberExpression[object.name='prisma'][property.name='workflowType']",
+        "message": "❌ Prismaモデル名はスネークケースを使用してください: prisma.workflow_types"
+      },
+      {
+        "selector": "MemberExpression[object.name='prisma'][property.name='workflowRequest']",
+        "message": "❌ Prismaモデル名はスネークケースを使用してください: prisma.workflow_requests"
+      },
+      {
+        "selector": "MemberExpression[object.name='prisma'][property.name='approvalRoute']",
+        "message": "❌ Prismaモデル名はスネークケースを使用してください: prisma.approval_routes"
+      }
+    ]
+  }
+}
