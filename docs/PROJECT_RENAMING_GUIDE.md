@@ -1,6 +1,16 @@
 # プロジェクト名称変更ガイド
 
-このドキュメントでは、「enterprise-commons」から「enterprise-commons」への名称変更手順を説明します。
+> **✅ 実施ステータス: ローカル変更完了（2025-10-18）**
+>
+> - ✅ ローカルディレクトリ名: `websys` → `enterprise-commons`
+> - ✅ ドキュメント内の名称: すべて `Enterprise Commons` に統一
+> - ✅ スクリプト出力: `Enterprise Commons` に更新
+> - ✅ テンプレート名: `enterprise-commons-backend/frontend` に更新
+> - ⏸️ GitHubリポジトリ名: `WebSys`（現状維持）
+>
+> **GitHubリポジトリ名は将来的に変更可能です。**
+
+このドキュメントでは、「websys」から「enterprise-commons」への名称変更手順と、実施済みの変更内容を説明します。
 
 ---
 
@@ -306,39 +316,39 @@ find . -name "*.md" -exec sed -i 's|/path/to/enterprise-commons|/path/to/enterpr
 
 ### 変更前の準備
 
-- [ ] 未コミットの変更をすべてコミット
-- [ ] 現在のブランチ確認（master or main）
-- [ ] リモートリポジトリのバックアップ確認
+- [x] 未コミットの変更をすべてコミット **（実施済み: 2025-10-18）**
+- [x] 現在のブランチ確認（master or main） **（実施済み）**
+- [x] リモートリポジトリのバックアップ確認 **（実施済み）**
 
 ### ローカル変更
 
-- [ ] ディレクトリ名変更: enterprise-commons → enterprise-commons
-- [ ] README.md 更新
-- [ ] CLAUDE.md 更新
-- [ ] RELEASE.md 更新
-- [ ] docs/*.md 更新
-- [ ] scripts/*.sh 更新
-- [ ] templates/backend-express/package.json 更新
-- [ ] templates/frontend-vue/package.json 更新
-- [ ] templates/backend-express/src/core/VERSION 更新
+- [x] ディレクトリ名変更: websys → enterprise-commons **（実施済み）**
+- [x] README.md 更新 **（実施済み）**
+- [x] CLAUDE.md 更新 **（実施済み）**
+- [x] RELEASE.md 更新 **（実施済み）**
+- [x] docs/*.md 更新 **（実施済み）**
+- [x] scripts/*.sh 更新 **（実施済み）**
+- [x] templates/backend-express/package.json 更新 **（実施済み）**
+- [x] templates/frontend-vue/package.json 更新 **（実施済み）**
+- [x] .gitignore 更新（バックアップディレクトリ除外） **（実施済み）**
 
 ### GitHub変更
 
-- [ ] GitHubリポジトリ名変更: Enterprise Commons → enterprise-commons
-- [ ] ローカルリモートURL更新
-- [ ] リモートURL確認（git remote -v）
+- [ ] GitHubリポジトリ名変更: WebSys → enterprise-commons **（保留: 現状維持）**
+- [ ] ローカルリモートURL更新 **（GitHubリポジトリ名変更後に実施）**
+- [ ] リモートURL確認（git remote -v） **（GitHubリポジトリ名変更後に実施）**
 
 ### コミット・プッシュ
 
-- [ ] 全変更をコミット
-- [ ] 新しいリモートURLへプッシュ
-- [ ] GitHubで変更内容確認
+- [x] 全変更をコミット **（実施済み: cb01a32）**
+- [x] リモートへプッシュ **（実施済み: 2025-10-18）**
+- [x] GitHubで変更内容確認 **（実施済み）**
 
 ### 既存プロジェクト更新（該当する場合）
 
-- [ ] 企業プロジェクトのドキュメント更新
-- [ ] update-core.sh実行時のパス確認
-- [ ] 動作確認
+- [ ] 企業プロジェクトのドキュメント更新 **（企業プロジェクト作成時に実施）**
+- [ ] update-core.sh実行時のパス確認 **（企業プロジェクト作成時に実施）**
+- [ ] 動作確認 **（企業プロジェクト作成時に実施）**
 
 ---
 
