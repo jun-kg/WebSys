@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# WebSys Phase2 高度品質チェック・自動修正システム
+# Enterprise Commons Phase2 高度品質チェック・自動修正システム
 # 作成日: 2025-09-30
 # 目的: AI活用品質分析・クロスリファレンス・自動修正機能
 
@@ -22,7 +22,7 @@ OUTPUT_DIR="docs/quality-reports"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 REPORT_FILE="$OUTPUT_DIR/advanced-quality-$TIMESTAMP.json"
 
-echo -e "${PURPLE}🔮 WebSys Phase2 高度品質チェックシステム${NC}"
+echo -e "${PURPLE}🔮 Enterprise Commons Phase2 高度品質チェックシステム${NC}"
 echo "自動修正モード: $AUTO_FIX"
 echo "分析レベル: $ANALYSIS_LEVEL"
 echo "レポート出力: $REPORT_FILE"

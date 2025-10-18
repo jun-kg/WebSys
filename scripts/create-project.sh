@@ -340,7 +340,7 @@ Thumbs.db
 EOF
 
     git add .
-    git commit -m "chore: initial commit from websys templates
+    git commit -m "chore: initial commit from enterprise-commons templates
 
 Project: $PROJECT_NAME
 Template version: $(cat backend/src/core/VERSION 2>/dev/null || echo 'unknown')

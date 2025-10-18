@@ -1,6 +1,6 @@
 # Gitリポジトリ構成管理ガイド
 
-このドキュメントでは、WebSys共通ライブラリと企業プロジェクトのGitリポジトリ構成のベストプラクティスを説明します。
+このドキュメントでは、Enterprise Commons共通ライブラリと企業プロジェクトのGitリポジトリ構成のベストプラクティスを説明します。
 
 ---
 
@@ -19,10 +19,10 @@
 ### ❌ 問題のある構成
 
 ```
-websys/
-├── .git/                           # → jun-kg/WebSys
+enterprise-commons/
+├── .git/                           # → jun-kg/Enterprise Commons
 ├── workspace/                      # .gitignore で無視
-│   ├── .git/                      # → jun-kg/WebSys（同じリポジトリ！）
+│   ├── .git/                      # → jun-kg/Enterprise Commons（同じリポジトリ！）
 │   ├── backend/
 │   └── frontend/
 ├── backend/
@@ -34,7 +34,7 @@ websys/
 
 | 問題 | 詳細 | 影響 |
 |------|------|------|
-| **1. 2重Git管理** | websys/.git と workspace/.git が存在 | コミット履歴混在・混乱 |
+| **1. 2重Git管理** | enterprise-commons/.git と workspace/.git が存在 | コミット履歴混在・混乱 |
 | **2. 同一リモート** | 両方とも同じGitHubリポジトリ | 管理が煩雑 |
 | **3. workspace が無視** | .gitignore で workspace/ を無視 | 変更が反映されない |
 | **4. 企業間分離なし** | 全企業が同じリポジトリを見る可能性 | セキュリティリスク |
@@ -50,8 +50,8 @@ websys/
 
 /home/user/projects/
 │
-├── websys/                          # ①共通ライブラリリポジトリ
-│   ├── .git/                       # → GitHub: jun-kg/WebSys
+├── enterprise-commons/                          # ①共通ライブラリリポジトリ
+│   ├── .git/                       # → GitHub: jun-kg/Enterprise Commons
 │   ├── backend/                    # 共通コア開発
 │   ├── frontend/                   # 共通コア開発
 │   ├── templates/                  # 配布用テンプレート
@@ -65,12 +65,12 @@ websys/
 │   ├── .git/                       # → GitHub: company-a/internal-system
 │   ├── backend/
 │   │   └── src/
-│   │       ├── core/              # ← websys からコピー（変更禁止）
+│   │       ├── core/              # ← enterprise-commons からコピー（変更禁止）
 │   │       ├── extensions/        # 企業A拡張
 │   │       └── custom/            # 企業A固有
 │   ├── frontend/
 │   │   └── src/
-│   │       ├── core/              # ← websys からコピー（変更禁止）
+│   │       ├── core/              # ← enterprise-commons からコピー（変更禁止）
 │   │       ├── extensions/        # 企業A拡張
 │   │       └── custom/            # 企業A固有
 │   └── README.md
@@ -88,7 +88,7 @@ websys/
 
 | リポジトリ | 用途 | GitHub URL | アクセス権 | 管理者 |
 |-----------|------|-----------|----------|--------|
-| **websys** | 共通ライブラリ開発 | `github.com/jun-kg/WebSys` | Public or Private | 開発チーム |
+| **enterprise-commons** | 共通ライブラリ開発 | `github.com/jun-kg/Enterprise Commons` | Public or Private | 開発チーム |
 | **company-a-project** | 企業A固有機能 | `github.com/company-a/internal-system` | Private | 企業A |
 | **company-b-project** | 企業B固有機能 | `github.com/company-b/business-app` | Private | 企業B |
 
@@ -106,12 +106,12 @@ websys/
 
 ## 移行手順
 
-### ステップ1: websys リポジトリ整理
+### ステップ1: enterprise-commons リポジトリ整理
 
 #### オプションA: workspace を削除（推奨）
 
 ```bash
-cd /path/to/websys
+cd /path/to/enterprise-commons
 
 # workspace を完全削除
 # 理由: templates/ で代替可能
@@ -131,10 +131,10 @@ git push origin master
 共通コア開発専用リポジトリとして独立させる場合：
 
 ```bash
-cd /path/to/websys
+cd /path/to/enterprise-commons
 
 # workspace を移動
-mv workspace ../websys-development
+mv workspace ../enterprise-commons-development
 
 # .gitignore から workspace/ 行を削除
 sed -i '/^workspace\/$/d' .gitignore
@@ -145,14 +145,14 @@ git commit -m "chore: move workspace to separate repository"
 git push origin master
 
 # 別リポジトリとして初期化
-cd ../websys-development
+cd ../enterprise-commons-development
 rm -rf .git
 git init
 git add .
 git commit -m "chore: initial commit for development environment"
 
-# GitHubで新規リポジトリ作成: jun-kg/WebSys-Development
-git remote add origin https://github.com/jun-kg/WebSys-Development.git
+# GitHubで新規リポジトリ作成: jun-kg/Enterprise Commons-Development
+git remote add origin https://github.com/jun-kg/Enterprise Commons-Development.git
 git branch -M main
 git push -u origin main
 ```
@@ -198,7 +198,7 @@ git push -u origin main
 
 ### ステップ3: .gitignore 最適化
 
-#### websys/.gitignore
+#### enterprise-commons/.gitignore
 
 ```gitignore
 # Dependencies
@@ -266,7 +266,7 @@ Thumbs.db
 *.db
 *.sqlite
 
-# WebSys core backup
+# Enterprise Commons core backup
 .core-backup-*/
 
 # 重要: core/ はコミット対象（変更禁止だが履歴管理）
@@ -277,7 +277,7 @@ Thumbs.db
 
 ## リポジトリ運用ルール
 
-### websys リポジトリ
+### enterprise-commons リポジトリ
 
 #### 目的
 共通ライブラリの開発・配布
@@ -335,10 +335,10 @@ git merge master
 企業固有機能の開発
 
 #### コミット対象
-- ✅ `backend/src/core/` - WebSysからコピー（変更禁止だが履歴管理）
+- ✅ `backend/src/core/` - Enterprise Commonsからコピー（変更禁止だが履歴管理）
 - ✅ `backend/src/extensions/` - 拡張機能
 - ✅ `backend/src/custom/` - 企業固有機能
-- ✅ `frontend/src/core/` - WebSysからコピー（変更禁止だが履歴管理）
+- ✅ `frontend/src/core/` - Enterprise Commonsからコピー（変更禁止だが履歴管理）
 - ✅ `frontend/src/extensions/` - 拡張機能
 - ✅ `frontend/src/custom/` - 企業固有機能
 - ✅ `infrastructure/` - Docker設定
@@ -356,31 +356,31 @@ main
 └── production          # 本番環境
 ```
 
-#### WebSys更新の反映
+#### Enterprise Commons更新の反映
 
 ```bash
-# 1. WebSys最新版を取得
-cd /path/to/websys
+# 1. Enterprise Commons最新版を取得
+cd /path/to/enterprise-commons
 git pull origin master
 git checkout v1.1.0-stable  # 安定版タグ
 
 # 2. 企業プロジェクトに適用
 cd /path/to/company-a-project
-git checkout -b update/websys-v1.1.0 develop
+git checkout -b update/enterprise-commons-v1.1.0 develop
 
 # 3. update-core.sh実行
-/path/to/websys/scripts/update-core.sh
+/path/to/enterprise-commons/scripts/update-core.sh
 
 # 4. 動作確認
 npm run test
 
 # 5. コミット
 git add backend/src/core frontend/src/core
-git commit -m "chore: update WebSys core to v1.1.0-stable"
+git commit -m "chore: update Enterprise Commons core to v1.1.0-stable"
 
 # 6. develop にマージ
 git checkout develop
-git merge update/websys-v1.1.0
+git merge update/enterprise-commons-v1.1.0
 git push origin develop
 ```
 
@@ -392,7 +392,7 @@ git push origin develop
 
 | リポジトリ | 推奨設定 | 理由 |
 |-----------|---------|------|
-| **websys** | Public or Private | 共通ライブラリとして配布 |
+| **enterprise-commons** | Public or Private | 共通ライブラリとして配布 |
 | **company-a-project** | Private（企業Aのみ） | 企業固有の機密情報を保護 |
 | **company-b-project** | Private（企業Bのみ） | 企業固有の機密情報を保護 |
 
@@ -438,14 +438,14 @@ git secrets --register-aws
 
 ### Q1: workspace/ を削除後、共通コア開発はどこで行う？
 
-**A:** 直接 `websys/backend/` と `websys/frontend/` で開発します。
+**A:** 直接 `enterprise-commons/backend/` と `enterprise-commons/frontend/` で開発します。
 
 ```bash
-cd /path/to/websys/backend
+cd /path/to/enterprise-commons/backend
 # 共通コア機能を開発
 
 # テンプレート生成
-cd /path/to/websys
+cd /path/to/enterprise-commons
 ./scripts/build-templates.sh
 ```
 
@@ -468,7 +468,7 @@ git remote -v
 
 ### Q3: 誤って core/ を変更してしまった
 
-**A:** WebSysから再度コピーします。
+**A:** Enterprise Commonsから再度コピーします。
 
 ```bash
 cd /path/to/company-a-project
@@ -477,37 +477,37 @@ cd /path/to/company-a-project
 cp -r .core-backup-YYYYMMDD-HHMMSS/backend-core/* backend/src/core/
 cp -r .core-backup-YYYYMMDD-HHMMSS/frontend-core/* frontend/src/core/
 
-# または、WebSysから再取得
-cd /path/to/websys
+# または、Enterprise Commonsから再取得
+cd /path/to/enterprise-commons
 git checkout v1.0.0-stable
 
 cd /path/to/company-a-project
-/path/to/websys/scripts/update-core.sh
+/path/to/enterprise-commons/scripts/update-core.sh
 ```
 
-### Q4: 2つの企業プロジェクトで異なるWebSysバージョンを使いたい
+### Q4: 2つの企業プロジェクトで異なるEnterprise Commonsバージョンを使いたい
 
 **A:** 各企業プロジェクトで異なるタグを使用できます。
 
 ```bash
 # 企業A: v1.0.0を使用
-cd /path/to/websys
+cd /path/to/enterprise-commons
 git checkout v1.0.0-stable
 cd /path/to/company-a-project
-/path/to/websys/scripts/update-core.sh
+/path/to/enterprise-commons/scripts/update-core.sh
 
 # 企業B: v1.1.0を使用
-cd /path/to/websys
+cd /path/to/enterprise-commons
 git checkout v1.1.0-stable
 cd /path/to/company-b-project
-/path/to/websys/scripts/update-core.sh
+/path/to/enterprise-commons/scripts/update-core.sh
 ```
 
 ---
 
 ## チェックリスト
 
-### WebSys リポジトリ整理
+### Enterprise Commons リポジトリ整理
 
 - [ ] workspace/ を削除 or 別リポジトリへ移行
 - [ ] .gitignore から `workspace/` 行を削除
@@ -537,7 +537,7 @@ cd /path/to/company-b-project
 
 ```
 リポジトリ分離:
-├── websys (jun-kg/WebSys)
+├── enterprise-commons (jun-kg/Enterprise Commons)
 │   └── 共通ライブラリ開発・配布
 │
 ├── company-a-project (company-a/internal-system)
@@ -549,7 +549,7 @@ cd /path/to/company-b-project
 
 ### 重要な原則
 
-1. **完全分離**: websys と 企業プロジェクト は別リポジトリ
+1. **完全分離**: enterprise-commons と 企業プロジェクト は別リポジトリ
 2. **アクセス制御**: 企業プロジェクトは Private リポジトリ
 3. **セキュリティ**: .env など機密情報は絶対コミットしない
 4. **core/ 管理**: 変更禁止だが履歴管理のためコミット対象
@@ -558,4 +558,4 @@ cd /path/to/company-b-project
 
 **ドキュメントバージョン**: 1.0.0
 **最終更新日**: 2025-10-18
-**対象WebSysバージョン**: v1.0.0以降
+**対象Enterprise Commonsバージョン**: v1.0.0以降

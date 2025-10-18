@@ -3,7 +3,7 @@
 ##############################################################################
 # release.sh
 #
-# 目的: WebSys共通ライブラリの安定版リリースを作成
+# 目的: Enterprise Commons共通ライブラリの安定版リリースを作成
 #
 # 実行方法:
 #   ./scripts/release.sh <version> <status>
@@ -35,7 +35,7 @@ NC='\033[0m' # No Color
 # 使用方法表示
 usage() {
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${BLUE}  WebSys リリーススクリプト${NC}"
+    echo -e "${BLUE}  Enterprise Commons リリーススクリプト${NC}"
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
     echo "使用方法:"
@@ -73,7 +73,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BLUE}  WebSys リリース作成: ${YELLOW}v${VERSION}-${STATUS}${NC}"
+echo -e "${BLUE}  Enterprise Commons リリース作成: ${YELLOW}v${VERSION}-${STATUS}${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
@@ -172,7 +172,7 @@ esac
 RECENT_COMMITS=$(git log --oneline -10 --pretty=format:"- %s")
 
 cat > "$ROOT_DIR/RELEASE.md" <<EOF
-# WebSys リリース管理
+# Enterprise Commons リリース管理
 
 このファイルは、共通ライブラリの安定版リリース情報を管理します。
 
@@ -263,7 +263,7 @@ ${RECENT_COMMITS}
 
 ## 📦 バージョニング規則
 
-WebSysは **Semantic Versioning 2.0.0** に従います。
+Enterprise Commonsは **Semantic Versioning 2.0.0** に従います。
 
 \`\`\`
 v{MAJOR}.{MINOR}.{PATCH}-{STATUS}
@@ -308,7 +308,7 @@ v{MAJOR}.{MINOR}.{PATCH}-{STATUS}
 ---
 
 **最終更新**: $(date '+%Y-%m-%d')
-**管理者**: WebSys開発チーム
+**管理者**: Enterprise Commons開発チーム
 EOF
 
 echo -e "${GREEN}  ✓${NC} RELEASE.md更新完了"
@@ -397,14 +397,14 @@ echo -e "   リリース日: $(date '+%Y-%m-%d')"
 echo ""
 echo -e "📋 企業プロジェクトでの使用方法:"
 echo ""
-echo -e "  1️⃣  WebSys最新版を取得"
-echo -e "     ${YELLOW}cd /path/to/websys${NC}"
+echo -e "  1️⃣  Enterprise Commons最新版を取得"
+echo -e "     ${YELLOW}cd /path/to/enterprise-commons${NC}"
 echo -e "     ${YELLOW}git pull origin master${NC}"
 echo -e "     ${YELLOW}git checkout $TAG${NC}"
 echo ""
 echo -e "  2️⃣  企業プロジェクトに適用"
 echo -e "     ${YELLOW}cd /path/to/company-project${NC}"
-echo -e "     ${YELLOW}/path/to/websys/scripts/update-core.sh${NC}"
+echo -e "     ${YELLOW}/path/to/enterprise-commons/scripts/update-core.sh${NC}"
 echo ""
 echo -e "  3️⃣  動作確認・コミット"
 echo -e "     ${YELLOW}npm run test${NC}"

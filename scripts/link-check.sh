@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# WebSys リンクチェッカー
+# Enterprise Commons リンクチェッカー
 # 作成日: 2025-09-30
 # 目的: Markdownファイル内のリンクの詳細検証
 
@@ -17,7 +17,7 @@ NC='\033[0m'
 CHECK_EXTERNAL=${1:-false}  # 外部リンクチェックするかどうか（デフォルト：false）
 OUTPUT_FORMAT=${2:-console} # 出力形式: console, json, html
 
-echo -e "${BLUE}🔗 WebSys リンクチェッカー${NC}"
+echo -e "${BLUE}🔗 Enterprise Commons リンクチェッカー${NC}"
 echo "外部リンクチェック: $CHECK_EXTERNAL"
 echo "出力形式: $OUTPUT_FORMAT"
 echo ""
@@ -168,7 +168,7 @@ EOF
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebSys リンクチェック結果</title>
+    <title>Enterprise Commons リンクチェック結果</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; }
         .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
@@ -188,7 +188,7 @@ EOF
 </head>
 <body>
     <div class="header">
-        <h1>🔗 WebSys リンクチェック結果</h1>
+        <h1>🔗 Enterprise Commons リンクチェック結果</h1>
         <p>実行日時: $(date)</p>
         <p>ステータス: <span class="$([ "$RESULT_STATUS" = "success" ] && echo "success" || echo "danger")">$RESULT_STATUS</span></p>
     </div>

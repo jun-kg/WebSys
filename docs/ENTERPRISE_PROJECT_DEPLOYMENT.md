@@ -1,6 +1,6 @@
 # 企業プロジェクト展開ガイド
 
-このドキュメントでは、WebSys共通ライブラリから企業向けプロジェクトを作成・展開する方法を説明します。
+このドキュメントでは、Enterprise Commons共通ライブラリから企業向けプロジェクトを作成・展開する方法を説明します。
 
 ---
 
@@ -20,7 +20,7 @@
 
 ### 3層分離アーキテクチャ
 
-WebSysは**共通ライブラリ型アーキテクチャ**を採用しており、以下の3層に明確に分離されています：
+Enterprise Commonsは**共通ライブラリ型アーキテクチャ**を採用しており、以下の3層に明確に分離されています：
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -58,7 +58,7 @@ WebSysは**共通ライブラリ型アーキテクチャ**を採用しており�
 ```
 /home/user/projects/
 │
-├── websys/                          # ①共通ライブラリリポジトリ
+├── enterprise-commons/                          # ①共通ライブラリリポジトリ
 │   ├── .git/                       # Gitリポジトリ（共通ライブラリ管理）
 │   ├── workspace/                  # 統合テスト・開発環境
 │   │   ├── backend/src/
@@ -110,7 +110,7 @@ WebSysは**共通ライブラリ型アーキテクチャ**を採用しており�
 共通コアの開発・更新後、配布用テンプレートを生成します。
 
 ```bash
-cd /path/to/websys
+cd /path/to/enterprise-commons
 ./scripts/build-templates.sh
 ```
 
@@ -155,7 +155,7 @@ git push origin main --tags
 ### 1. 新規プロジェクト作成
 
 ```bash
-cd /path/to/websys
+cd /path/to/enterprise-commons
 ./scripts/create-project.sh company-a-project
 ```
 
@@ -420,7 +420,7 @@ import { PermissionMatrix } from '@core/components/permissions'
 ### 1. 共通ライブラリで新機能開発
 
 ```bash
-cd /path/to/websys/workspace
+cd /path/to/enterprise-commons/workspace
 # backend/src/core または frontend/src/core で開発
 ```
 
@@ -429,7 +429,7 @@ cd /path/to/websys/workspace
 #### 方法1: リリーススクリプト使用（推奨）
 
 ```bash
-cd /path/to/websys
+cd /path/to/enterprise-commons
 ./scripts/release.sh 1.0.0 stable
 ```
 
@@ -462,7 +462,7 @@ cd /path/to/websys
 #### 方法2: 手動リリース（上級者向け）
 
 ```bash
-cd /path/to/websys
+cd /path/to/enterprise-commons
 ./scripts/build-templates.sh
 git add templates/
 git commit -m "feat(core): add new export feature"
@@ -476,7 +476,7 @@ git push origin main --tags
 
 ```bash
 # RELEASE.mdでステータス確認
-cat /path/to/websys/RELEASE.md
+cat /path/to/enterprise-commons/RELEASE.md
 ```
 
 **ステータスの意味:**
@@ -490,16 +490,16 @@ cat /path/to/websys/RELEASE.md
 
 ```bash
 # 安定版タグにチェックアウト
-cd /path/to/websys
+cd /path/to/enterprise-commons
 git checkout v1.0.0-stable
 
 # 企業プロジェクトに適用
 cd /path/to/company-a-project
-/path/to/websys/scripts/update-core.sh
+/path/to/enterprise-commons/scripts/update-core.sh
 ```
 
 **スクリプトの機能:**
-- ✅ 自動的にWebSys最新版を取得
+- ✅ 自動的にEnterprise Commons最新版を取得
 - ✅ バージョン確認（現在→最新）
 - ✅ 自動バックアップ作成
 - ✅ backend/src/core と frontend/src/core を更新
@@ -538,17 +538,17 @@ cd /path/to/company-a-project
 cd /path/to/company-a-project
 
 # 最新テンプレート取得
-cd /path/to/websys
+cd /path/to/enterprise-commons
 git pull origin main
 
 # 企業プロジェクトへ反映
 cd /path/to/company-a-project
 rsync -av --delete \
-  /path/to/websys/templates/backend-express/src/core/ \
+  /path/to/enterprise-commons/templates/backend-express/src/core/ \
   ./backend/src/core/
 
 rsync -av --delete \
-  /path/to/websys/templates/frontend-vue/src/core/ \
+  /path/to/enterprise-commons/templates/frontend-vue/src/core/ \
   ./frontend/src/core/
 
 # 動作確認後コミット
@@ -570,7 +570,7 @@ git commit -m "chore: update core libraries to v2025.11.01"
 vim backend/src/core/middleware/auth.ts
 
 # ✅ 正しい方法
-# 1. websys/workspace で修正
+# 1. enterprise-commons/workspace で修正
 # 2. build-templates.sh 実行
 # 3. rsync で企業プロジェクトに反映
 ```
@@ -679,7 +679,7 @@ VITE_API_BASE_URL=http://backend:8000
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│ 1. 共通機能開発（websys/workspace）                   │
+│ 1. 共通機能開発（enterprise-commons/workspace）                   │
 │    └─ core/ で認証・ログ監視等を実装                  │
 ├─────────────────────────────────────────────────────┤
 │ 2. テンプレート生成（build-templates.sh）             │
@@ -708,4 +708,4 @@ VITE_API_BASE_URL=http://backend:8000
 
 **ドキュメントバージョン:** 1.0.0
 **最終更新日:** 2025-10-18
-**対象WebSysバージョン:** 2025.10.18-da3bb70
+**対象Enterprise Commonsバージョン:** 2025.10.18-da3bb70

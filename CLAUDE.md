@@ -152,7 +152,7 @@ model workflow_requests { ... }
 **共通コアモデル変更時**:
 ```bash
 # templates ディレクトリで実施
-cd websys/backend
+cd enterprise-commons/backend
 npx prisma migrate dev --name core_update_users
 ```
 
@@ -188,7 +188,7 @@ Vue.js 3 + Element Plus + Express + PostgreSQLを使用した**共通ライブ�
 ### 📁 ディレクトリ構造
 
 ```
-websys/                           # 共通ライブラリリポジトリ
+enterprise-commons/                           # 共通ライブラリリポジトリ
 ├── templates/                    # 共通テンプレート（配布用）
 │   ├── frontend/                # フロントエンド共通コード
 │   │   ├── src/
@@ -336,7 +336,7 @@ import { SalesReportService } from '@custom/services/SalesReportService'
 #### 共通ライブラリ更新時
 ```bash
 # 1. templates/ 更新（共通リポジトリ）
-cd websys/templates/frontend/src/core
+cd enterprise-commons/templates/frontend/src/core
 git commit -m "feat(core): add new log export feature"
 
 # 2. 各プロジェクトで更新適用
@@ -409,7 +409,7 @@ cd workspace/backend     # バックエンド開発
 - 初回のみテンプレートから workspace にコピー
 
 ### 2. Git管理の分離
-- Docker環境: websys/.git で管理
+- Docker環境: enterprise-commons/.git で管理
 - 開発ソース: workspace/.git で独立管理
 - workspace/ は Docker環境のコミット対象外
 

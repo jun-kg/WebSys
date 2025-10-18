@@ -1,4 +1,4 @@
-# 🏗️ WebSys開発プラットフォーム
+# 🏗️ Enterprise Commons開発プラットフォーム
 
 Vue.js 3 + Element Plus + Express + PostgreSQLによるモダンな社内システム開発プラットフォームです。
 
@@ -34,7 +34,7 @@ Vue.js 3 + Element Plus + Express + PostgreSQLによるモダンな社内シス�
 ## 📁 プロジェクト構造
 
 ```
-websys-dev-platform/              # 🏗️ 開発プラットフォーム
+enterprise-commons-dev-platform/              # 🏗️ 開発プラットフォーム
 ├── 📋 templates/                 # 再利用可能テンプレート
 │   ├── frontend-vue/            # Vue.js + Element Plus
 │   └── backend-express/         # Express + Prisma

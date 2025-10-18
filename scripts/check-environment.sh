@@ -10,9 +10,9 @@ echo ""
 echo "=== プロキシ設定チェック ==="
 
 # Docker専用設定の残存チェック
-if grep -q "websys_backend_dev" workspace/frontend/vite.config.ts 2>/dev/null; then
+if grep -q "enterprise-commons_backend_dev" workspace/frontend/vite.config.ts 2>/dev/null; then
   echo "⚠️  警告: vite.config.tsにDocker専用設定が残っています"
-  echo "   現在の設定: websys_backend_dev:8000"
+  echo "   現在の設定: enterprise-commons_backend_dev:8000"
   echo "   推奨設定: process.env.VITE_API_URL || 'http://localhost:8000'"
   WARNINGS=$((WARNINGS + 1))
 fi

@@ -7,13 +7,13 @@
 #
 # 実行方法:
 #   cd /path/to/company-project
-#   /path/to/websys/scripts/update-core.sh
+#   /path/to/enterprise-commons/scripts/update-core.sh
 #
 #   または:
-#   /path/to/websys/scripts/update-core.sh /path/to/company-project
+#   /path/to/enterprise-commons/scripts/update-core.sh /path/to/company-project
 #
 # 処理内容:
-#   1. websys リポジトリから最新テンプレート取得
+#   1. enterprise-commons リポジトリから最新テンプレート取得
 #   2. backend/src/core を更新
 #   3. frontend/src/core を更新
 #   4. バージョン情報表示
@@ -45,7 +45,7 @@ echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━�
 echo -e "${BLUE}  共通ライブラリ更新スクリプト${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
-echo -e "${GREEN}[INFO]${NC} WebSysディレクトリ: $WEBSYS_DIR"
+echo -e "${GREEN}[INFO]${NC} Enterprise Commonsディレクトリ: $WEBSYS_DIR"
 echo -e "${GREEN}[INFO]${NC} プロジェクトディレクトリ: $PROJECT_DIR"
 echo ""
 
@@ -55,10 +55,10 @@ echo ""
 
 echo -e "${BLUE}[1/6]${NC} 事前チェック中..."
 
-# WebSysディレクトリチェック
+# Enterprise Commonsディレクトリチェック
 if [ ! -d "$WEBSYS_DIR/templates" ]; then
-    echo -e "${RED}[エラー]${NC} WebSysリポジトリが見つかりません: $WEBSYS_DIR"
-    echo -e "${YELLOW}[ヒント]${NC} スクリプトはWebSysリポジトリの scripts/ 内に配置してください"
+    echo -e "${RED}[エラー]${NC} Enterprise Commonsリポジトリが見つかりません: $WEBSYS_DIR"
+    echo -e "${YELLOW}[ヒント]${NC} スクリプトはEnterprise Commonsリポジトリの scripts/ 内に配置してください"
     exit 1
 fi
 
@@ -106,10 +106,10 @@ echo -e "    Frontend: ${YELLOW}$CURRENT_FRONTEND_VERSION${NC}"
 echo ""
 
 ##############################################################################
-# 3. WebSys最新版取得
+# 3. Enterprise Commons最新版取得
 ##############################################################################
 
-echo -e "${BLUE}[3/6]${NC} WebSys最新版取得中..."
+echo -e "${BLUE}[3/6]${NC} Enterprise Commons最新版取得中..."
 
 cd "$WEBSYS_DIR"
 
@@ -117,7 +117,7 @@ cd "$WEBSYS_DIR"
 if [ -d ".git" ]; then
     # 未コミット変更チェック
     if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-        echo -e "${YELLOW}[警告]${NC} WebSysリポジトリに未コミット変更があります"
+        echo -e "${YELLOW}[警告]${NC} Enterprise Commonsリポジトリに未コミット変更があります"
         echo -e "${YELLOW}続行しますか？ (y/N): ${NC}"
         read -r response
         if [[ ! "$response" =~ ^[Yy]$ ]]; then
@@ -131,7 +131,7 @@ if [ -d ".git" ]; then
         echo -e "${YELLOW}[警告]${NC} git pull に失敗しました。ローカルのテンプレートを使用します"
     }
 else
-    echo -e "${YELLOW}[スキップ]${NC} WebSysはGitリポジトリではありません"
+    echo -e "${YELLOW}[スキップ]${NC} Enterprise CommonsはGitリポジトリではありません"
 fi
 
 # 新しいバージョン確認

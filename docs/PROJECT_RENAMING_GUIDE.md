@@ -1,6 +1,6 @@
 # プロジェクト名称変更ガイド
 
-このドキュメントでは、「websys」から「enterprise-commons」への名称変更手順を説明します。
+このドキュメントでは、「enterprise-commons」から「enterprise-commons」への名称変更手順を説明します。
 
 ---
 
@@ -67,7 +67,7 @@ github.com/jun-kg/enterprise-commons
 
 ```bash
 # 現在
-/home/user/projects/websys/
+/home/user/projects/enterprise-commons/
 
 # 変更後
 /home/user/projects/enterprise-commons/
@@ -77,7 +77,7 @@ github.com/jun-kg/enterprise-commons
 
 ```
 # 現在
-github.com/jun-kg/WebSys
+github.com/jun-kg/Enterprise Commons
 
 # 変更後
 github.com/jun-kg/enterprise-commons
@@ -87,20 +87,20 @@ github.com/jun-kg/enterprise-commons
 
 | ファイル | 変更箇所 | 変更内容 |
 |---------|---------|---------|
-| **README.md** | プロジェクト名・説明 | websys → enterprise-commons |
-| **CLAUDE.md** | 全体的な説明 | websys → enterprise-commons |
-| **RELEASE.md** | タイトル・説明 | WebSys → Enterprise Commons |
-| **docs/ENTERPRISE_PROJECT_DEPLOYMENT.md** | 全体的な説明 | websys → enterprise-commons |
-| **docs/GIT_REPOSITORY_STRUCTURE.md** | リポジトリURL・説明 | websys → enterprise-commons |
+| **README.md** | プロジェクト名・説明 | enterprise-commons → enterprise-commons |
+| **CLAUDE.md** | 全体的な説明 | enterprise-commons → enterprise-commons |
+| **RELEASE.md** | タイトル・説明 | Enterprise Commons → Enterprise Commons |
+| **docs/ENTERPRISE_PROJECT_DEPLOYMENT.md** | 全体的な説明 | enterprise-commons → enterprise-commons |
+| **docs/GIT_REPOSITORY_STRUCTURE.md** | リポジトリURL・説明 | enterprise-commons → enterprise-commons |
 
 ### 4. スクリプト更新
 
 | スクリプト | 変更箇所 | 変更内容 |
 |-----------|---------|---------|
-| **scripts/build-templates.sh** | ヘッダー・出力メッセージ | WebSys → Enterprise Commons |
-| **scripts/create-project.sh** | ヘッダー・出力メッセージ | websys → enterprise-commons |
-| **scripts/update-core.sh** | ヘッダー・説明 | WebSys → Enterprise Commons |
-| **scripts/release.sh** | ヘッダー・出力メッセージ | WebSys → Enterprise Commons |
+| **scripts/build-templates.sh** | ヘッダー・出力メッセージ | Enterprise Commons → Enterprise Commons |
+| **scripts/create-project.sh** | ヘッダー・出力メッセージ | enterprise-commons → enterprise-commons |
+| **scripts/update-core.sh** | ヘッダー・説明 | Enterprise Commons → Enterprise Commons |
+| **scripts/release.sh** | ヘッダー・出力メッセージ | Enterprise Commons → Enterprise Commons |
 
 ### 5. テンプレートファイル
 
@@ -121,7 +121,7 @@ github.com/jun-kg/enterprise-commons
 cd /home/typho/src/elementplus
 
 # ディレクトリ名変更
-mv websys enterprise-commons
+mv enterprise-commons enterprise-commons
 
 # 確認
 ls -la enterprise-commons
@@ -131,7 +131,7 @@ ls -la enterprise-commons
 
 #### GitHub Web UIでの変更
 
-1. GitHubリポジトリページを開く: `https://github.com/jun-kg/WebSys`
+1. GitHubリポジトリページを開く: `https://github.com/jun-kg/Enterprise Commons`
 2. **Settings** タブをクリック
 3. **Repository name** セクションで `enterprise-commons` に変更
 4. **Rename** ボタンをクリック
@@ -158,39 +158,39 @@ git remote -v
 ```bash
 cd /home/typho/src/elementplus/enterprise-commons
 
-# README.md 内の websys を enterprise-commons に一括置換
-sed -i 's/websys/enterprise-commons/g' README.md
-sed -i 's/WebSys/Enterprise Commons/g' README.md
+# README.md 内の enterprise-commons を enterprise-commons に一括置換
+sed -i 's/enterprise-commons/enterprise-commons/g' README.md
+sed -i 's/Enterprise Commons/Enterprise Commons/g' README.md
 ```
 
 #### CLAUDE.md 更新
 
 ```bash
-sed -i 's/websys/enterprise-commons/g' CLAUDE.md
-sed -i 's/WebSys/Enterprise Commons/g' CLAUDE.md
+sed -i 's/enterprise-commons/enterprise-commons/g' CLAUDE.md
+sed -i 's/Enterprise Commons/Enterprise Commons/g' CLAUDE.md
 ```
 
 #### RELEASE.md 更新
 
 ```bash
-sed -i 's/WebSys/Enterprise Commons/g' RELEASE.md
-sed -i 's/websys/enterprise-commons/g' RELEASE.md
+sed -i 's/Enterprise Commons/Enterprise Commons/g' RELEASE.md
+sed -i 's/enterprise-commons/enterprise-commons/g' RELEASE.md
 ```
 
 #### ドキュメントディレクトリ更新
 
 ```bash
 # 全ドキュメント一括更新
-find docs/ -name "*.md" -exec sed -i 's/websys/enterprise-commons/g' {} \;
-find docs/ -name "*.md" -exec sed -i 's/WebSys/Enterprise Commons/g' {} \;
+find docs/ -name "*.md" -exec sed -i 's/enterprise-commons/enterprise-commons/g' {} \;
+find docs/ -name "*.md" -exec sed -i 's/Enterprise Commons/Enterprise Commons/g' {} \;
 ```
 
 ### ステップ4: スクリプト更新
 
 ```bash
 # 全スクリプト一括更新
-find scripts/ -name "*.sh" -exec sed -i 's/websys/enterprise-commons/g' {} \;
-find scripts/ -name "*.sh" -exec sed -i 's/WebSys/Enterprise Commons/g' {} \;
+find scripts/ -name "*.sh" -exec sed -i 's/enterprise-commons/enterprise-commons/g' {} \;
+find scripts/ -name "*.sh" -exec sed -i 's/Enterprise Commons/Enterprise Commons/g' {} \;
 ```
 
 ### ステップ5: テンプレート更新
@@ -199,7 +199,7 @@ find scripts/ -name "*.sh" -exec sed -i 's/WebSys/Enterprise Commons/g' {} \;
 
 ```bash
 # templates/backend-express/package.json
-sed -i 's/"name": "websys-backend"/"name": "enterprise-commons-backend"/g' \
+sed -i 's/"name": "enterprise-commons-backend"/"name": "enterprise-commons-backend"/g' \
   templates/backend-express/package.json
 ```
 
@@ -207,7 +207,7 @@ sed -i 's/"name": "websys-backend"/"name": "enterprise-commons-backend"/g' \
 
 ```bash
 # templates/frontend-vue/package.json
-sed -i 's/"name": "websys-frontend"/"name": "enterprise-commons-frontend"/g' \
+sed -i 's/"name": "enterprise-commons-frontend"/"name": "enterprise-commons-frontend"/g' \
   templates/frontend-vue/package.json
 ```
 
@@ -228,11 +228,11 @@ cd /home/typho/src/elementplus/enterprise-commons
 git add .
 
 # コミット
-git commit -m "refactor: rename project from websys to enterprise-commons
+git commit -m "refactor: rename project from enterprise-commons to enterprise-commons
 
 📦 変更内容:
-- プロジェクト名: websys → enterprise-commons
-- リポジトリURL: jun-kg/WebSys → jun-kg/enterprise-commons
+- プロジェクト名: enterprise-commons → enterprise-commons
+- リポジトリURL: jun-kg/Enterprise Commons → jun-kg/enterprise-commons
 - ドキュメント全面更新
 - スクリプト出力メッセージ更新
 - テンプレートpackage.json更新
@@ -259,7 +259,7 @@ git push origin master
 cd /path/to/company-a-project
 
 # README.mdやドキュメント内のパス更新
-find . -name "*.md" -exec sed -i 's|/path/to/websys|/path/to/enterprise-commons|g' {} \;
+find . -name "*.md" -exec sed -i 's|/path/to/enterprise-commons|/path/to/enterprise-commons|g' {} \;
 
 # update-core.sh実行時のパス確認
 # /path/to/enterprise-commons/scripts/update-core.sh
@@ -296,7 +296,7 @@ find . -name "*.md" -exec sed -i 's|/path/to/websys|/path/to/enterprise-commons|
 
 | リポジトリ | 旧名 | 新名 | URL |
 |-----------|------|------|-----|
-| 共通ライブラリ | WebSys | enterprise-commons | github.com/jun-kg/enterprise-commons |
+| 共通ライブラリ | Enterprise Commons | enterprise-commons | github.com/jun-kg/enterprise-commons |
 | 企業Aプロジェクト | - | company-a-project | github.com/company-a/internal-system |
 | 企業Bプロジェクト | - | company-b-project | github.com/company-b/business-app |
 
@@ -312,7 +312,7 @@ find . -name "*.md" -exec sed -i 's|/path/to/websys|/path/to/enterprise-commons|
 
 ### ローカル変更
 
-- [ ] ディレクトリ名変更: websys → enterprise-commons
+- [ ] ディレクトリ名変更: enterprise-commons → enterprise-commons
 - [ ] README.md 更新
 - [ ] CLAUDE.md 更新
 - [ ] RELEASE.md 更新
@@ -324,7 +324,7 @@ find . -name "*.md" -exec sed -i 's|/path/to/websys|/path/to/enterprise-commons|
 
 ### GitHub変更
 
-- [ ] GitHubリポジトリ名変更: WebSys → enterprise-commons
+- [ ] GitHubリポジトリ名変更: Enterprise Commons → enterprise-commons
 - [ ] ローカルリモートURL更新
 - [ ] リモートURL確認（git remote -v）
 
@@ -369,10 +369,10 @@ git remote set-url origin https://github.com/jun-kg/enterprise-commons.git
 
 ```bash
 # ハードコードされたURL検索
-grep -r "github.com/jun-kg/WebSys" .
+grep -r "github.com/jun-kg/Enterprise Commons" .
 
 # 一括置換
-find . -type f -name "*.md" -exec sed -i 's|github.com/jun-kg/WebSys|github.com/jun-kg/enterprise-commons|g' {} \;
+find . -type f -name "*.md" -exec sed -i 's|github.com/jun-kg/Enterprise Commons|github.com/jun-kg/enterprise-commons|g' {} \;
 ```
 
 ---
@@ -383,7 +383,7 @@ find . -type f -name "*.md" -exec sed -i 's|github.com/jun-kg/WebSys|github.com/
 
 | 項目 | 旧名称 | 新名称 | 改善効果 |
 |------|-------|-------|---------|
-| **理解しやすさ** | websys（不明確） | enterprise-commons（明確） | ✅ 企業共通基盤と即座に理解できる |
+| **理解しやすさ** | enterprise-commons（不明確） | enterprise-commons（明確） | ✅ 企業共通基盤と即座に理解できる |
 | **検索性** | 汎用的な単語 | 業界標準用語 | ✅ GitHubでの検索性向上 |
 | **説明の必要性** | 常に補足説明が必要 | 名前だけで説明可能 | ✅ ドキュメント簡潔化 |
 
@@ -399,4 +399,4 @@ find . -type f -name "*.md" -exec sed -i 's|github.com/jun-kg/WebSys|github.com/
 
 **ドキュメントバージョン**: 1.0.0
 **最終更新日**: 2025-10-18
-**対象プロジェクト**: websys → enterprise-commons
+**対象プロジェクト**: enterprise-commons → enterprise-commons

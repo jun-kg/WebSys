@@ -70,4 +70,4 @@ frontend/src/components.d.ts
 # Prisma
 backend/prisma/*.db
 backend/prisma/*.db-journal
-backend/prisma/migrations/
+backend/prisma/migrations/.core-backup-*/

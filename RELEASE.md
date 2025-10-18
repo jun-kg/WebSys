@@ -1,4 +1,4 @@
-# WebSys リリース管理
+# Enterprise Commons リリース管理
 
 このファイルは、共通ライブラリの安定版リリース情報を管理します。
 
@@ -86,7 +86,7 @@
 
 ## 📦 バージョニング規則
 
-WebSysは **Semantic Versioning 2.0.0** に従います。
+Enterprise Commonsは **Semantic Versioning 2.0.0** に従います。
 
 ```
 v{MAJOR}.{MINOR}.{PATCH}-{STATUS}
@@ -120,13 +120,13 @@ v{MAJOR}.{MINOR}.{PATCH}-{STATUS}
 ### 方法1: RELEASE.mdを確認
 
 ```bash
-cat /path/to/websys/RELEASE.md
+cat /path/to/enterprise-commons/RELEASE.md
 ```
 
 ### 方法2: Gitタグを確認
 
 ```bash
-cd /path/to/websys
+cd /path/to/enterprise-commons
 git tag | grep stable
 ```
 
@@ -164,7 +164,7 @@ cat templates/backend-express/src/core/VERSION
 
 ### 質問・問題報告
 
-- **GitHub Issues**: https://github.com/jun-kg/WebSys/issues
+- **GitHub Issues**: https://github.com/jun-kg/Enterprise Commons/issues
 - **ドキュメント**: `/docs`
 - **緊急連絡**: （記載予定）
 
@@ -174,10 +174,10 @@ cat templates/backend-express/src/core/VERSION
 
 ```bash
 # 1. リリース情報確認
-cat /path/to/websys/RELEASE.md
+cat /path/to/enterprise-commons/RELEASE.md
 
 # 2. 最新安定版を取得
-cd /path/to/websys
+cd /path/to/enterprise-commons
 git pull origin main
 git checkout v1.0.0-stable  # 安定版タグ
 
@@ -186,10 +186,10 @@ git checkout v1.0.0-stable  # 安定版タグ
 
 # 4. 企業プロジェクトに適用
 cd /path/to/company-project
-/path/to/websys/scripts/update-core.sh
+/path/to/enterprise-commons/scripts/update-core.sh
 ```
 
 ---
 
 **最終更新**: 2025-10-18
-**管理者**: WebSys開発チーム
+**管理者**: Enterprise Commons開発チーム
